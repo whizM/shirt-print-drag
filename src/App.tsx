@@ -1,16 +1,35 @@
-import TShirtCustomizer from './components/TShirtCustomizer';
+import { useState } from 'react'
+import TShirtMockup from './components/TShirtMockup'
+import ImageUploader from './components/ImageUploader'
+import './App.css'
 
 function App() {
+  const [imageUrl, setImageUrl] = useState<string>('')
+
+  const handleImageUpload = (file: File) => {
+    const url = URL.createObjectURL(file)
+    setImageUrl(url)
+  }
+
+  const printableArea = {
+    top: 120,
+    left: 150,
+    width: 200,
+    height: 220,
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <main className="flex-1 flex items-center justify-center p-4">
-        <TShirtCustomizer />
-      </main>
-      <footer className="py-4 text-center text-gray-500 text-sm">
-        © {new Date().getFullYear()} Custom Print Preview. All rights reserved.
-      </footer>
+    <div className="relative w-screen h-screen">
+      <TShirtMockup
+        printableArea={printableArea}
+        showPrintableArea={true}
+        imageUrl={imageUrl}
+      />
+      <div className="absolute top-4 right-4 w-48">
+        <ImageUploader onImageUpload={handleImageUpload} />
+      </div>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
