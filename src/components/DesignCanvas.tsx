@@ -20,6 +20,8 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
         width: 100,
         height: 100,
         rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
     });
 
     const imageRef = React.useRef<Konva.Image>(null);
@@ -38,8 +40,10 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
                 ) * 0.8;
                 setTransform(prev => ({
                     ...prev,
-                    width: img.width * scale,
-                    height: img.height * scale,
+                    width: img.width,
+                    height: img.height,
+                    scaleX: scale,
+                    scaleY: scale,
                 }));
             };
         }
@@ -58,13 +62,21 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
             setTransform({
                 x: node.x(),
                 y: node.y(),
-                width: node.width() * node.scaleX(),
-                height: node.height() * node.scaleY(),
+                width: node.width(),
+                height: node.height(),
                 rotation: node.rotation(),
+                scaleX: node.scaleX(),
+                scaleY: node.scaleY(),
             });
-            node.scaleX(1);
-            node.scaleY(1);
         }
+    };
+
+    const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+        setTransform(prev => ({
+            ...prev,
+            x: e.target.x(),
+            y: e.target.y(),
+        }));
     };
 
     return (
@@ -80,8 +92,9 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
             <Layer>
                 {image && (
                     <>
-                        {/* Faded background image */}
+                        {/* Main draggable image */}
                         <Image
+                            ref={imageRef}
                             image={image}
                             x={transform.x}
                             y={transform.y}
@@ -90,11 +103,15 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
                             offsetX={transform.width / 2}
                             offsetY={transform.height / 2}
                             rotation={transform.rotation}
+                            scaleX={transform.scaleX}
+                            scaleY={transform.scaleY}
                             opacity={0.3}
-                            listening={false}
+                            draggable
+                            onDragEnd={handleDragEnd}
+                            onTransformEnd={handleTransformEnd}
                         />
 
-                        {/* Main draggable image with clip */}
+                        {/* Clipped version of the same image */}
                         <Group
                             clipFunc={(ctx) => {
                                 ctx.beginPath();
@@ -108,7 +125,6 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
                             }}
                         >
                             <Image
-                                ref={imageRef}
                                 image={image}
                                 x={transform.x}
                                 y={transform.y}
@@ -117,15 +133,10 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
                                 offsetX={transform.width / 2}
                                 offsetY={transform.height / 2}
                                 rotation={transform.rotation}
-                                draggable
-                                onTransformEnd={handleTransformEnd}
-                                onDragEnd={(e) => {
-                                    setTransform(prev => ({
-                                        ...prev,
-                                        x: e.target.x(),
-                                        y: e.target.y(),
-                                    }));
-                                }}
+                                scaleX={transform.scaleX}
+                                scaleY={transform.scaleY}
+                                opacity={1}
+                                listening={false}
                             />
                         </Group>
 
@@ -135,7 +146,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
                             y={printableArea.top}
                             width={printableArea.width}
                             height={printableArea.height}
-                            stroke="#3B82F6" // blue-500
+                            stroke="#3B82F6"
                             strokeWidth={2}
                             dash={[4, 4]}
                             listening={false}
@@ -160,6 +171,25 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
                                 }
                                 return newBox;
                             }}
+                            enabledAnchors={[
+                                'top-left',
+                                'top-center',
+                                'top-right',
+                                'middle-left',
+                                'middle-right',
+                                'bottom-left',
+                                'bottom-center',
+                                'bottom-right'
+                            ]}
+                            rotateEnabled={true}
+                            keepRatio={false}
+                            padding={5}
+                            anchorSize={10}
+                            anchorCornerRadius={5}
+                            anchorStroke="#3B82F6"
+                            anchorFill="white"
+                            borderStroke="#3B82F6"
+                            borderDash={[3, 3]}
                         />
                     </>
                 )}
