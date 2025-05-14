@@ -7,11 +7,12 @@ interface RightProps {
     onRotationChange?: (rotation: number) => void;
     onZoneChange: (zone: 'front' | 'pocket' | 'back') => void;
     selectedZone: 'front' | 'pocket' | 'back';
+    onTextAdd?: (text: string, fontSize: number, color: string) => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 
-const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationChange, onZoneChange, selectedZone }) => {
+const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationChange, onZoneChange, selectedZone, onTextAdd }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [size, setSize] = useState(100);
     const [rotation, setRotation] = useState(0);
@@ -21,6 +22,9 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
         message: string;
         type: 'error' | 'success' | 'warning';
     } | null>(null);
+    const [text, setText] = useState('');
+    const [textColor, setTextColor] = useState('#000000');
+    const [fontSize, setFontSize] = useState(24);
 
     const handleUploadClick = () => {
         fileInputRef.current?.click();
@@ -107,6 +111,14 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
 
     const handleZoneClick = (zone: 'front' | 'pocket' | 'back') => {
         onZoneChange(zone);
+    };
+
+    const handleTextAdd = () => {
+        if (text.trim()) {
+            console.log(text, fontSize, textColor);
+            onTextAdd?.(text, fontSize, textColor);
+            setText('');
+        }
     };
 
     return (
@@ -270,8 +282,58 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
 
                     {/* Text Tab Content */}
                     <div className={activeTab === 'text' ? '' : 'hidden'}>
-                        <h3 className="text-lg font-medium text-gray-800 mb-4">Text Customization</h3>
-                        <p className="text-gray-600">Text editing options will be displayed here.</p>
+                        <div className="p-6">
+                            <h3 className="text-lg font-medium text-gray-800 mb-4">Add Text</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="text-input" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Enter Text
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="text-input"
+                                        className="w-full text-black border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        value={text}
+                                        onChange={(e) => setText(e.target.value)}
+                                        placeholder="Enter your text here"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Font Size
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="12"
+                                        max="72"
+                                        value={fontSize}
+                                        onChange={(e) => setFontSize(Number(e.target.value))}
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <span className="text-xs text-gray-500">{fontSize}px</span>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Text Color
+                                    </label>
+                                    <input
+                                        type="color"
+                                        value={textColor}
+                                        onChange={(e) => setTextColor(e.target.value)}
+                                        className="w-full h-10 rounded-md cursor-pointer"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleTextAdd}
+                                    className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700 transition-colors"
+                                >
+                                    Add Text
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Options Tab Content */}

@@ -35,6 +35,9 @@ interface TShirtMockupProps {
   designSize: number;
   designRotation: number;
   onRotationChange?: (rotation: number) => void;
+  text?: string;
+  textFontSize?: number;
+  textColor?: string;
 }
 
 const TShirtMockup: React.FC<TShirtMockupProps> = ({
@@ -44,6 +47,9 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
   designSize,
   designRotation,
   onRotationChange,
+  text,
+  textFontSize,
+  textColor
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
@@ -155,15 +161,16 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
 
             {/* Design Canvas */}
             <div className="absolute inset-0">
-              {imageUrl && (
-                <DesignCanvas
-                  imageUrl={imageUrl}
-                  printableArea={printableArea}
-                  designSize={designSize}
-                  designRotation={designRotation}
-                  onRotationChange={onRotationChange}
-                />
-              )}
+              <DesignCanvas
+                imageUrl={imageUrl || ''}
+                printableArea={printableArea}
+                designSize={designSize}
+                designRotation={designRotation}
+                onRotationChange={onRotationChange}
+                text={text}
+                textFontSize={textFontSize}
+                textColor={textColor}
+              />
             </div>
 
             {/* Printable area visualization */}

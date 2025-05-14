@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Stage, Layer, Image, Transformer, Group, Rect } from 'react-konva';
+import { Stage, Layer, Image, Transformer, Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import useImage from 'use-image';
 
@@ -14,9 +14,12 @@ interface DesignCanvasProps {
     designSize: number;
     designRotation: number;
     onRotationChange?: (rotation: number) => void;
+    text?: string;
+    textFontSize?: number;
+    textColor?: string;
 }
 
-const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange }) => {
+const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange, text, textFontSize = 24, textColor = '#000000' }) => {
     const [image] = useImage(imageUrl);
     const [initialScale, setInitialScale] = useState(1);
     const [transform, setTransform] = useState({
@@ -32,6 +35,19 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
     const transformerRef = useRef<Konva.Transformer>(null);
     const [isSelected, setIsSelected] = useState(false);
     const stageRef = useRef<Konva.Stage>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [selectedType, setSelectedType] = useState<'image' | 'text' | null>(null);
+    const [textElements, setTextElements] = useState<Array<{
+        id: string;
+        text: string;
+        x: number;
+        y: number;
+        fontSize: number;
+        color: string;
+        rotation: number;
+        draggable: boolean;
+        ref: React.RefObject<Konva.Text>;
+    }>>([]);
 
     useEffect(() => {
         if (imageUrl) {
@@ -108,15 +124,30 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
         };
     }, []);
 
+    // Update image selection handler
+    const handleImageSelect = (e: Konva.KonvaEventObject<MouseEvent>) => {
+        e.cancelBubble = true; // Stop event propagation
+        setSelectedId(null);
+        setSelectedType('image');
+        setIsSelected(true);
+    };
+
+    // Update text selection handler
+    const handleTextSelect = (id: string, e: Konva.KonvaEventObject<MouseEvent | Event>) => {
+        e.cancelBubble = true; // Stop event propagation
+        setSelectedId(id);
+        setSelectedType('text');
+        setIsSelected(true);
+    };
+
+    // Update deselect handler
     const checkDeselect = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
         const clickedOnEmpty = e.target === e.target.getStage();
         if (clickedOnEmpty) {
+            setSelectedId(null);
+            setSelectedType(null);
             setIsSelected(false);
         }
-    };
-
-    const handleSelect = () => {
-        setIsSelected(true);
     };
 
     const handleTransformEnd = () => {
@@ -150,6 +181,80 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
         }));
     };
 
+    // Update text handling
+    useEffect(() => {
+        if (text) {
+            const newTextElement = {
+                id: Date.now().toString(),
+                text,
+                x: printableArea.left + printableArea.width / 2,
+                y: printableArea.top + printableArea.height / 2,
+                fontSize: textFontSize,
+                color: textColor,
+                rotation: 0,
+                draggable: true,
+                ref: React.createRef<Konva.Text>()
+            };
+            setTextElements(prev => [...prev, newTextElement]);
+            setSelectedId(newTextElement.id);
+            setSelectedType('text');
+            setIsSelected(true);
+        }
+    }, [text, printableArea, textFontSize, textColor]);
+
+    const handleTextDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
+        const newElements = textElements.map(el => {
+            if (el.id === id) {
+                return {
+                    ...el,
+                    x: e.target.x(),
+                    y: e.target.y(),
+                };
+            }
+            return el;
+        });
+        setTextElements(newElements);
+    };
+
+    // Update transformer effect
+    useEffect(() => {
+        if (!isSelected || !transformerRef.current) return;
+
+        let nodeToAttach = null;
+        if (selectedType === 'text' && selectedId) {
+            nodeToAttach = textElements.find(el => el.id === selectedId)?.ref?.current;
+        } else if (selectedType === 'image') {
+            nodeToAttach = imageRef.current;
+        }
+
+        if (nodeToAttach) {
+            transformerRef.current.nodes([nodeToAttach]);
+            transformerRef.current.getLayer()?.batchDraw();
+        }
+    }, [isSelected, selectedType, selectedId, textElements]);
+
+    // Handle text transform
+    const handleTextTransform = (id: string) => {
+        const textNode = textElements.find(el => el.id === id)?.ref?.current;
+        if (textNode) {
+            const newRotation = textNode.rotation();
+            const newScale = textNode.scaleX();
+
+            setTextElements(prev => prev.map(el => {
+                if (el.id === id) {
+                    return {
+                        ...el,
+                        rotation: newRotation,
+                        fontSize: Math.round(el.fontSize * newScale),
+                        x: textNode.x(),
+                        y: textNode.y(),
+                    };
+                }
+                return el;
+            }));
+        }
+    };
+    console.log(textElements);
     return (
         <Stage
             ref={stageRef}
@@ -165,6 +270,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
             onTap={checkDeselect}
         >
             <Layer>
+                {/* Render image first */}
                 {image && (
                     <>
                         {/* Main draggable image */}
@@ -182,7 +288,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                             scaleY={transform.scaleY}
                             opacity={0.3}
                             draggable
-                            onClick={handleSelect}
+                            onClick={handleImageSelect}
                             onDragEnd={handleDragEnd}
                             onTransformEnd={handleTransformEnd}
                             onTransform={handleTransformEnd}
@@ -216,61 +322,90 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                                 listening={false}
                             />
                         </Group>
-
-                        {/* Printable area outline */}
-                        <Rect
-                            x={printableArea.left}
-                            y={printableArea.top}
-                            width={printableArea.width}
-                            height={printableArea.height}
-                            strokeWidth={2}
-                            dash={[4, 4]}
-                            listening={false}
-                        />
-
-                        {/* Only show transformer when selected */}
-                        {isSelected && image && (
-                            <Transformer
-                                ref={transformerRef}
-                                boundBoxFunc={(oldBox, newBox) => {
-                                    const maxWidth = printableArea.width * 1.5;
-                                    const maxHeight = printableArea.height * 1.5;
-                                    const minWidth = 20;
-                                    const minHeight = 20;
-
-                                    if (
-                                        newBox.width < minWidth ||
-                                        newBox.height < minHeight ||
-                                        newBox.width > maxWidth ||
-                                        newBox.height > maxHeight
-                                    ) {
-                                        return oldBox;
-                                    }
-                                    return newBox;
-                                }}
-                                enabledAnchors={[
-                                    'top-left',
-                                    'top-center',
-                                    'top-right',
-                                    'middle-left',
-                                    'middle-right',
-                                    'bottom-left',
-                                    'bottom-center',
-                                    'bottom-right'
-                                ]}
-                                rotateEnabled={true}
-                                keepRatio={false}
-                                padding={5}
-                                anchorSize={10}
-                                anchorCornerRadius={5}
-                                anchorStroke="#3B82F6"
-                                anchorFill="white"
-                                borderStroke="#3B82F6"
-                                borderDash={[3, 3]}
-                                onTransformEnd={handleTransformEnd}
-                            />
-                        )}
                     </>
+                )}
+
+                {/* Printable area outline */}
+                <Rect
+                    x={printableArea.left}
+                    y={printableArea.top}
+                    width={printableArea.width}
+                    height={printableArea.height}
+                    strokeWidth={2}
+                    dash={[4, 4]}
+                    listening={false}
+                />
+
+                {/* Render text elements on top */}
+                {textElements.map((el) => (
+                    <Text
+                        key={el.id}
+                        ref={el.ref}
+                        text={el.text}
+                        x={el.x}
+                        y={el.y}
+                        fontSize={el.fontSize}
+                        fill={el.color}
+                        rotation={el.rotation}
+                        draggable={el.draggable}
+                        align="center"
+                        verticalAlign="middle"
+                        onClick={(e) => handleTextSelect(el.id, e)}
+                        onTap={(e) => handleTextSelect(el.id, e)}
+                        onDragEnd={(e) => handleTextDragEnd(e, el.id)}
+                        onTransform={() => handleTextTransform(el.id)}
+                        onTransformEnd={() => handleTextTransform(el.id)}
+                    />
+                ))}
+
+                {/* Transformer should be last to appear on top of everything */}
+                {isSelected && (selectedType === 'text' || selectedType === 'image') && (
+                    <Transformer
+                        ref={transformerRef}
+                        boundBoxFunc={(oldBox, newBox) => {
+                            if (selectedType === 'text') {
+                                return newBox; // Allow free transform for text
+                            }
+                            // Existing bounds for image
+                            const maxWidth = printableArea.width * 1.5;
+                            const maxHeight = printableArea.height * 1.5;
+                            const minWidth = 20;
+                            const minHeight = 20;
+
+                            if (
+                                newBox.width < minWidth ||
+                                newBox.height < minHeight ||
+                                newBox.width > maxWidth ||
+                                newBox.height > maxHeight
+                            ) {
+                                return oldBox;
+                            }
+                            return newBox;
+                        }}
+                        enabledAnchors={selectedType === 'text' ? ['middle-left', 'middle-right'] : [
+                            'top-left',
+                            'top-center',
+                            'top-right',
+                            'middle-left',
+                            'middle-right',
+                            'bottom-left',
+                            'bottom-center',
+                            'bottom-right'
+                        ]}
+                        rotateEnabled={true}
+                        keepRatio={selectedType !== 'text'} // Don't keep ratio for text
+                        padding={5}
+                        anchorSize={10}
+                        anchorCornerRadius={5}
+                        anchorStroke="#3B82F6"
+                        anchorFill="white"
+                        borderStroke="#3B82F6"
+                        borderDash={[3, 3]}
+                        onTransformEnd={selectedType === 'text' ?
+                            () => selectedId && handleTextTransform(selectedId) :
+                            handleTransformEnd
+                        }
+                    />
                 )}
             </Layer>
         </Stage>
