@@ -30,7 +30,13 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
     });
     const imageRef = useRef<Konva.Image>(null);
     const transformerRef = useRef<Konva.Transformer>(null);
-    const [isSelected, setIsSelected] = useState(true);
+    const [isSelected, setIsSelected] = useState(false);
+
+    useEffect(() => {
+        if (imageUrl) {
+            setIsSelected(true);
+        }
+    }, [imageUrl]);
 
     useEffect(() => {
         if (image) {
@@ -47,6 +53,15 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                 scaleX: scale * (designSize / 100),
                 scaleY: scale * (designSize / 100),
             }));
+
+            if (imageRef.current && transformerRef.current) {
+                const layer = transformerRef.current.getLayer();
+                transformerRef.current.nodes([imageRef.current]);
+                if (layer) {
+                    layer.batchDraw();
+                }
+            }
+            setIsSelected(true);
         }
     }, [image, printableArea, designSize]);
 
@@ -69,7 +84,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                 layer.batchDraw();
             }
         }
-    }, [isSelected]);
+    }, [isSelected, image]);
 
     const checkDeselect = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
         const clickedOnEmpty = e.target === e.target.getStage();
@@ -147,6 +162,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                             onClick={handleSelect}
                             onDragEnd={handleDragEnd}
                             onTransformEnd={handleTransformEnd}
+                            onTransform={handleTransformEnd}
                         />
 
                         {/* Clipped version of the same image */}
@@ -190,7 +206,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                         />
 
                         {/* Only show transformer when selected */}
-                        {isSelected && (
+                        {isSelected && image && (
                             <Transformer
                                 ref={transformerRef}
                                 boundBoxFunc={(oldBox, newBox) => {
