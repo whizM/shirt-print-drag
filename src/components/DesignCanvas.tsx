@@ -17,9 +17,14 @@ interface DesignCanvasProps {
     text?: string;
     textFontSize?: number;
     textColor?: string;
+    texts: Array<{
+        text: string;
+        fontSize: number;
+        color: string;
+    }>;
 }
 
-const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange, text, textFontSize = 24, textColor = '#000000' }) => {
+const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange, text, textFontSize = 24, textColor = '#000000', texts }) => {
     const [image] = useImage(imageUrl);
     const [initialScale, setInitialScale] = useState(1);
     const [transform, setTransform] = useState({
@@ -181,26 +186,42 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
         }));
     };
 
-    // Update text handling
+    // Update text elements when texts prop or printable area changes
     useEffect(() => {
-        if (text) {
-            const newTextElement = {
-                id: Date.now().toString(),
-                text,
+        const newTextElements = texts.map((textData, index) => {
+            const existingElement = textElements[index];
+
+            // If element exists, keep its position relative to the printable area
+            if (existingElement) {
+                const relativeX = (existingElement.x - printableArea.left) / printableArea.width;
+                const relativeY = (existingElement.y - printableArea.top) / printableArea.height;
+
+                return {
+                    ...existingElement,
+                    text: textData.text,
+                    fontSize: textData.fontSize,
+                    color: textData.color,
+                    x: printableArea.left + (printableArea.width * relativeX),
+                    y: printableArea.top + (printableArea.height * relativeY),
+                };
+            }
+
+            // For new elements, position them in the center of the printable area
+            return {
+                id: Date.now().toString() + Math.random(),
+                text: textData.text,
                 x: printableArea.left + printableArea.width / 2,
                 y: printableArea.top + printableArea.height / 2,
-                fontSize: textFontSize,
-                color: textColor,
+                fontSize: textData.fontSize,
+                color: textData.color,
                 rotation: 0,
                 draggable: true,
                 ref: React.createRef<Konva.Text>()
             };
-            setTextElements(prev => [...prev, newTextElement]);
-            setSelectedId(newTextElement.id);
-            setSelectedType('text');
-            setIsSelected(true);
-        }
-    }, [text, printableArea, textFontSize, textColor]);
+        });
+
+        setTextElements(newTextElements);
+    }, [texts, printableArea]);
 
     const handleTextDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
         const newElements = textElements.map(el => {

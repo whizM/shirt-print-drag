@@ -30,11 +30,11 @@ function App() {
   const [designSize, setDesignSize] = useState(100)
   const [designRotation, setDesignRotation] = useState(0)
   const [selectedZone, setSelectedZone] = useState<'front' | 'pocket' | 'back'>('front')
-  const [designText, setDesignText] = useState<{
+  const [designTexts, setDesignTexts] = useState<Array<{
     text: string;
     fontSize: number;
     color: string;
-  } | null>(null)
+  }>>([]);
 
   const handleImageUpload = (file: File) => {
     const url = URL.createObjectURL(file)
@@ -54,7 +54,7 @@ function App() {
   }
 
   const handleTextAdd = (text: string, fontSize: number, color: string) => {
-    setDesignText({ text, fontSize, color })
+    setDesignTexts(prev => [...prev, { text, fontSize, color }]);
   }
 
   return (
@@ -68,9 +68,7 @@ function App() {
           designSize={designSize}
           designRotation={designRotation}
           onRotationChange={handleRotationChange}
-          text={designText?.text}
-          textFontSize={designText?.fontSize}
-          textColor={designText?.color}
+          texts={designTexts}
         />
         <Right
           onImageUpload={handleImageUpload}
