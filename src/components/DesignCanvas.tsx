@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Image, Transformer, Group, Rect } from 'react-konva';
 import Konva from 'konva';
+import useImage from 'use-image';
 
 interface DesignCanvasProps {
     imageUrl: string;
@@ -16,7 +17,7 @@ interface DesignCanvasProps {
 }
 
 const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange }) => {
-    const [image, setImage] = useState<HTMLImageElement | null>(null);
+    const [image] = useImage(imageUrl);
     const [initialScale, setInitialScale] = useState(1);
     const [transform, setTransform] = useState({
         x: printableArea.left + printableArea.width / 2,
@@ -27,32 +28,27 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
         scaleX: designSize / 100,
         scaleY: designSize / 100,
     });
-
-    const imageRef = React.useRef<Konva.Image>(null);
-    const transformerRef = React.useRef<Konva.Transformer>(null);
+    const imageRef = useRef<Konva.Image>(null);
+    const transformerRef = useRef<Konva.Transformer>(null);
+    const [isSelected, setIsSelected] = useState(true);
 
     useEffect(() => {
-        if (imageUrl) {
-            const img = new window.Image();
-            img.src = imageUrl;
-            img.onload = () => {
-                setImage(img);
-                // Calculate initial scale to fit the printable area
-                const scale = Math.min(
-                    printableArea.width / img.width,
-                    printableArea.height / img.height
-                ) * 0.8;
-                setInitialScale(scale);
-                setTransform(prev => ({
-                    ...prev,
-                    width: img.width,
-                    height: img.height,
-                    scaleX: scale * (designSize / 100),
-                    scaleY: scale * (designSize / 100),
-                }));
-            };
+        if (image) {
+            // Calculate initial scale to fit the printable area
+            const scale = Math.min(
+                printableArea.width / image.width,
+                printableArea.height / image.height
+            ) * 0.8;
+            setInitialScale(scale);
+            setTransform(prev => ({
+                ...prev,
+                width: image.width,
+                height: image.height,
+                scaleX: scale * (designSize / 100),
+                scaleY: scale * (designSize / 100),
+            }));
         }
-    }, [imageUrl, printableArea]);
+    }, [image, printableArea, designSize]);
 
     useEffect(() => {
         if (initialScale) {
@@ -66,11 +62,25 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
     }, [designSize, designRotation, initialScale]);
 
     useEffect(() => {
-        if (transformerRef.current && imageRef.current) {
+        if (isSelected && imageRef.current && transformerRef.current) {
+            const layer = transformerRef.current.getLayer();
             transformerRef.current.nodes([imageRef.current]);
-            transformerRef.current.getLayer()?.batchDraw();
+            if (layer) {
+                layer.batchDraw();
+            }
         }
-    }, [image]);
+    }, [isSelected]);
+
+    const checkDeselect = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+        const clickedOnEmpty = e.target === e.target.getStage();
+        if (clickedOnEmpty) {
+            setIsSelected(false);
+        }
+    };
+
+    const handleSelect = () => {
+        setIsSelected(true);
+    };
 
     const handleTransformEnd = () => {
         if (imageRef.current) {
@@ -104,7 +114,6 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
     };
 
     return (
-
         <Stage
             width={500}
             height={500}
@@ -114,6 +123,8 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                 left: '50%',
                 transform: 'translate(-50%, -20%)',
             }}
+            onClick={checkDeselect}
+            onTap={checkDeselect}
         >
             <Layer>
                 {image && (
@@ -133,6 +144,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                             scaleY={transform.scaleY}
                             opacity={0.3}
                             draggable
+                            onClick={handleSelect}
                             onDragEnd={handleDragEnd}
                             onTransformEnd={handleTransformEnd}
                         />
@@ -177,45 +189,48 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                             listening={false}
                         />
 
-                        {/* Transformer */}
-                        <Transformer
-                            ref={transformerRef}
-                            boundBoxFunc={(oldBox, newBox) => {
-                                const maxWidth = printableArea.width * 1.5;
-                                const maxHeight = printableArea.height * 1.5;
-                                const minWidth = 20;
-                                const minHeight = 20;
+                        {/* Only show transformer when selected */}
+                        {isSelected && (
+                            <Transformer
+                                ref={transformerRef}
+                                boundBoxFunc={(oldBox, newBox) => {
+                                    const maxWidth = printableArea.width * 1.5;
+                                    const maxHeight = printableArea.height * 1.5;
+                                    const minWidth = 20;
+                                    const minHeight = 20;
 
-                                if (
-                                    newBox.width < minWidth ||
-                                    newBox.height < minHeight ||
-                                    newBox.width > maxWidth ||
-                                    newBox.height > maxHeight
-                                ) {
-                                    return oldBox;
-                                }
-                                return newBox;
-                            }}
-                            enabledAnchors={[
-                                'top-left',
-                                'top-center',
-                                'top-right',
-                                'middle-left',
-                                'middle-right',
-                                'bottom-left',
-                                'bottom-center',
-                                'bottom-right'
-                            ]}
-                            rotateEnabled={true}
-                            keepRatio={false}
-                            padding={5}
-                            anchorSize={10}
-                            anchorCornerRadius={5}
-                            anchorStroke="#3B82F6"
-                            anchorFill="white"
-                            borderStroke="#3B82F6"
-                            borderDash={[3, 3]}
-                        />
+                                    if (
+                                        newBox.width < minWidth ||
+                                        newBox.height < minHeight ||
+                                        newBox.width > maxWidth ||
+                                        newBox.height > maxHeight
+                                    ) {
+                                        return oldBox;
+                                    }
+                                    return newBox;
+                                }}
+                                enabledAnchors={[
+                                    'top-left',
+                                    'top-center',
+                                    'top-right',
+                                    'middle-left',
+                                    'middle-right',
+                                    'bottom-left',
+                                    'bottom-center',
+                                    'bottom-right'
+                                ]}
+                                rotateEnabled={true}
+                                keepRatio={false}
+                                padding={5}
+                                anchorSize={10}
+                                anchorCornerRadius={5}
+                                anchorStroke="#3B82F6"
+                                anchorFill="white"
+                                borderStroke="#3B82F6"
+                                borderDash={[3, 3]}
+                                onTransformEnd={handleTransformEnd}
+                            />
+                        )}
                     </>
                 )}
             </Layer>
