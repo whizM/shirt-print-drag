@@ -31,10 +31,12 @@ function App() {
   const [designRotation, setDesignRotation] = useState(0)
   const [selectedZone, setSelectedZone] = useState<'front' | 'pocket' | 'back'>('front')
   const [designTexts, setDesignTexts] = useState<Array<{
+    id: string;
     text: string;
     fontSize: number;
     color: string;
   }>>([]);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
 
   const handleImageUpload = (file: File) => {
     const url = URL.createObjectURL(file)
@@ -54,8 +56,35 @@ function App() {
   }
 
   const handleTextAdd = (text: string, fontSize: number, color: string) => {
-    setDesignTexts(prev => [...prev, { text, fontSize, color }]);
+    setDesignTexts(prev => [...prev, {
+      id: Date.now().toString() + Math.random(),
+      text,
+      fontSize,
+      color
+    }]);
   }
+
+  const handleTextDelete = (id: string) => {
+    setDesignTexts(prev => prev.filter(text => text.id !== id));
+    if (selectedTextId === id) {
+      setSelectedTextId(null);
+    }
+  };
+
+  const handleTextSelect = (id: string) => {
+    setSelectedTextId(id);
+  };
+
+  const handleTextUpdate = (id: string, text: string, fontSize: number, color: string) => {
+    setDesignTexts(prev => prev.map(item =>
+      item.id === id ? { ...item, text, fontSize, color } : item
+    ));
+    setSelectedTextId(null); // Deselect after update
+  };
+
+  const selectedText = selectedTextId
+    ? designTexts.find(text => text.id === selectedTextId) || null
+    : null;
 
   return (
     <div className="min-h-screen bg-white">
@@ -69,6 +98,8 @@ function App() {
           designRotation={designRotation}
           onRotationChange={handleRotationChange}
           texts={designTexts}
+          onTextSelect={handleTextSelect}
+          selectedTextId={selectedTextId}
         />
         <Right
           onImageUpload={handleImageUpload}
@@ -77,6 +108,10 @@ function App() {
           onZoneChange={handleZoneChange}
           selectedZone={selectedZone}
           onTextAdd={handleTextAdd}
+          onTextUpdate={handleTextUpdate}
+          onTextDelete={handleTextDelete}
+          selectedTextId={selectedTextId}
+          selectedText={selectedText}
         />
       </div>
     </div>

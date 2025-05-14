@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Notification from "./Notification";
 
 interface RightProps {
@@ -8,11 +8,31 @@ interface RightProps {
     onZoneChange: (zone: 'front' | 'pocket' | 'back') => void;
     selectedZone: 'front' | 'pocket' | 'back';
     onTextAdd?: (text: string, fontSize: number, color: string) => void;
+    onTextUpdate?: (id: string, text: string, fontSize: number, color: string) => void;
+    selectedTextId?: string | null;
+    selectedText?: {
+        id: string;
+        text: string;
+        fontSize: number;
+        color: string;
+    } | null;
+    onTextDelete?: (id: string) => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 
-const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationChange, onZoneChange, selectedZone, onTextAdd }) => {
+const Right: React.FC<RightProps> = ({
+    onImageUpload,
+    onSizeChange,
+    onRotationChange,
+    onZoneChange,
+    selectedZone,
+    onTextAdd,
+    onTextUpdate,
+    selectedTextId,
+    selectedText,
+    onTextDelete
+}) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [size, setSize] = useState(100);
     const [rotation, setRotation] = useState(0);
@@ -25,6 +45,19 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
     const [text, setText] = useState('');
     const [textColor, setTextColor] = useState('#000000');
     const [fontSize, setFontSize] = useState(24);
+    const [isEditing, setIsEditing] = useState(false);
+
+    useEffect(() => {
+        if (selectedText) {
+            setText(selectedText.text);
+            setFontSize(selectedText.fontSize);
+            setTextColor(selectedText.color);
+            setIsEditing(true);
+            setActiveTab('text');
+        } else {
+            setIsEditing(false);
+        }
+    }, [selectedText]);
 
     const handleUploadClick = () => {
         fileInputRef.current?.click();
@@ -113,17 +146,30 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
         onZoneChange(zone);
     };
 
-    const handleTextAdd = () => {
+    const handleTextAction = () => {
         if (text.trim()) {
-            console.log(text, fontSize, textColor);
-            onTextAdd?.(text, fontSize, textColor);
-            setText('');
+            if (isEditing && selectedTextId && onTextUpdate) {
+                onTextUpdate(selectedTextId, text, fontSize, textColor);
+                setText('');
+                setFontSize(24);
+                setTextColor('#000000');
+                setIsEditing(false);
+            } else if (onTextAdd) {
+                onTextAdd(text, fontSize, textColor);
+                setText('');
+            }
         }
+    };
+
+    const handleCancelEdit = () => {
+        setText('');
+        setFontSize(24);
+        setTextColor('#000000');
+        setIsEditing(false);
     };
 
     return (
         <div className="w-full md:w-1/2 lg:w-2/5">
-            {/* Show notification if exists */}
             {notification && (
                 <Notification
                     message={notification.message}
@@ -133,7 +179,6 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
             )}
 
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                {/* Tabs navigation */}
                 <div className="flex border-b border-gray-200">
                     {['product', 'color', 'design', 'text', 'options'].map((tab) => (
                         <button
@@ -149,9 +194,7 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                     ))}
                 </div>
 
-                {/* Tab content container */}
                 <div className="p-6">
-                    {/* Design Tab Content */}
                     <div className={activeTab === 'design' ? '' : 'hidden'}>
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-2">
@@ -165,7 +208,6 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                                 </div>
                             </div>
 
-                            {/* Design zones selector */}
                             <div className="grid grid-cols-3 gap-3 mb-4">
                                 <div
                                     id="zone-front"
@@ -218,7 +260,6 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                             </div>
                         </div>
 
-                        {/* Drag & Drop Design Area */}
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-medium text-gray-800">Drag & Drop Design</h3>
@@ -268,73 +309,96 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                         </div>
                     </div>
 
-                    {/* Product Tab Content */}
                     <div className={activeTab === 'product' ? '' : 'hidden'}>
                         <h3 className="text-lg font-medium text-gray-800 mb-4">Product Selection</h3>
                         <p className="text-gray-600">Product options will be displayed here.</p>
                     </div>
 
-                    {/* Color Tab Content */}
                     <div className={activeTab === 'color' ? '' : 'hidden'}>
                         <h3 className="text-lg font-medium text-gray-800 mb-4">Color Options</h3>
                         <p className="text-gray-600">Color selection will be displayed here.</p>
                     </div>
 
-                    {/* Text Tab Content */}
                     <div className={activeTab === 'text' ? '' : 'hidden'}>
-                        <h3 className="text-lg font-medium text-gray-800 mb-4">Add Text</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="text-input" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Enter Text
-                                </label>
-                                <input
-                                    type="text"
-                                    id="text-input"
-                                    className="w-full text-black border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    value={text}
-                                    onChange={(e) => setText(e.target.value)}
-                                    placeholder="Enter your text here"
-                                />
-                            </div>
+                        <div className="mb-6">
+                            <h3 className="text-lg font-medium text-gray-800 mb-4">Add Text</h3>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Font Size
-                                </label>
-                                <input
-                                    type="range"
-                                    min="12"
-                                    max="72"
-                                    value={fontSize}
-                                    onChange={(e) => setFontSize(Number(e.target.value))}
-                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                />
-                                <span className="text-xs text-gray-500">{fontSize}px</span>
-                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="text-input" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Enter Text
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="text-input"
+                                        className="w-full px-3 text-black py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                        placeholder="Your text here"
+                                        value={text}
+                                        onChange={(e) => setText(e.target.value)}
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Text Color
-                                </label>
-                                <input
-                                    type="color"
-                                    value={textColor}
-                                    onChange={(e) => setTextColor(e.target.value)}
-                                    className="w-full h-10 rounded-md cursor-pointer"
-                                />
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Font Size
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="12"
+                                        max="72"
+                                        value={fontSize}
+                                        onChange={(e) => setFontSize(Number(e.target.value))}
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <span className="text-xs text-gray-500">{fontSize}px</span>
+                                </div>
 
-                            <button
-                                onClick={handleTextAdd}
-                                className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700 transition-colors"
-                            >
-                                Add Text
-                            </button>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Text Color
+                                    </label>
+                                    <input
+                                        type="color"
+                                        value={textColor}
+                                        onChange={(e) => setTextColor(e.target.value)}
+                                        className="w-full h-10 rounded-md cursor-pointer"
+                                    />
+                                </div>
+
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={handleTextAction}
+                                        className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                    >
+                                        {isEditing ? 'Update Text' : 'Add Text'}
+                                    </button>
+
+                                    {isEditing && (
+                                        <>
+                                            <button
+                                                onClick={handleCancelEdit}
+                                                className="bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (selectedTextId && onTextDelete) {
+                                                        onTextDelete(selectedTextId);
+                                                        handleCancelEdit();
+                                                    }
+                                                }}
+                                                className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                            >
+                                                Delete
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Options Tab Content */}
                     <div className={activeTab === 'options' ? '' : 'hidden'}>
                         <h3 className="text-lg font-medium text-gray-800 mb-4">Additional Options</h3>
                         <p className="text-gray-600">Additional customization options will be displayed here.</p>
@@ -342,8 +406,7 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                 </div>
             </div>
 
-            {/* Design Adjustment Tools - Only show when design tab is active */}
-            {activeTab === 'design' && (
+            {activeTab === 'design111' && (
                 <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6">
                     <h3 className="text-lg font-medium text-gray-800 mb-4">Design Adjustments</h3>
 
@@ -383,7 +446,6 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                 </div>
             )}
 
-            {/* Help section */}
             <div className="mt-6 bg-indigo-50 border border-indigo-100 rounded-lg p-4 flex items-start">
                 <i className="fa-solid fa-circle-info text-indigo-500 mt-0.5 mr-3"></i>
                 <div>

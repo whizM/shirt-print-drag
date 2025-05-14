@@ -36,10 +36,13 @@ interface TShirtMockupProps {
   designRotation: number;
   onRotationChange?: (rotation: number) => void;
   texts: Array<{
+    id: string,
     text: string;
     fontSize: number;
     color: string;
   }>;
+  onTextSelect?: (id: string) => void;
+  selectedTextId?: string | null;
 }
 
 const TShirtMockup: React.FC<TShirtMockupProps> = ({
@@ -49,7 +52,9 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
   designSize,
   designRotation,
   onRotationChange,
-  texts
+  texts,
+  onTextSelect,
+  selectedTextId
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
@@ -168,6 +173,8 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
                 designRotation={designRotation}
                 onRotationChange={onRotationChange}
                 texts={texts}
+                onTextSelect={onTextSelect}
+                selectedTextId={selectedTextId}
               />
             </div>
 

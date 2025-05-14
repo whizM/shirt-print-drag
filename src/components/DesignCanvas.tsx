@@ -18,13 +18,16 @@ interface DesignCanvasProps {
     textFontSize?: number;
     textColor?: string;
     texts: Array<{
+        id: string;
         text: string;
         fontSize: number;
         color: string;
     }>;
+    onTextSelect?: (id: string) => void;
+    selectedTextId?: string | null;
 }
 
-const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange, texts }) => {
+const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange, texts, onTextSelect, selectedTextId }) => {
     const [image] = useImage(imageUrl);
     const [initialScale, setInitialScale] = useState(1);
     const [transform, setTransform] = useState({
@@ -140,9 +143,13 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
     // Update text selection handler
     const handleTextSelect = (id: string, e: Konva.KonvaEventObject<MouseEvent | Event>) => {
         e.cancelBubble = true; // Stop event propagation
+        console.log(id);
         setSelectedId(id);
         setSelectedType('text');
         setIsSelected(true);
+
+        // Call parent's onTextSelect
+        onTextSelect?.(id);
     };
 
     // Update deselect handler
@@ -188,8 +195,9 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
 
     // Update text elements when texts prop or printable area changes
     useEffect(() => {
-        const newTextElements = texts.map((textData, index) => {
-            const existingElement = textElements[index];
+        const newTextElements = texts.map((textData) => {
+            // Find existing element by ID instead of index
+            const existingElement = textElements.find(el => el.id === textData.id);
 
             // If element exists, keep its position relative to the printable area
             if (existingElement) {
@@ -198,6 +206,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
 
                 return {
                     ...existingElement,
+                    id: textData.id,
                     text: textData.text,
                     fontSize: textData.fontSize,
                     color: textData.color,
@@ -208,7 +217,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
 
             // For new elements, position them in the center of the printable area
             return {
-                id: Date.now().toString() + Math.random(),
+                id: textData.id,
                 text: textData.text,
                 x: printableArea.left + printableArea.width / 2,
                 y: printableArea.top + printableArea.height / 2,
@@ -275,7 +284,23 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
             }));
         }
     };
-    console.log(textElements);
+
+    // Update useEffect to sync selectedId with selectedTextId from props
+    useEffect(() => {
+        if (selectedTextId && selectedTextId !== selectedId) {
+            setSelectedId(selectedTextId);
+            setSelectedType('text');
+            setIsSelected(true);
+
+            // Find the text element and set up the transformer
+            const textElement = textElements.find(el => el.id === selectedTextId);
+            if (textElement && textElement.ref.current && transformerRef.current) {
+                transformerRef.current.nodes([textElement.ref.current]);
+                transformerRef.current.getLayer()?.batchDraw();
+            }
+        }
+    }, [selectedTextId, textElements]);
+
     return (
         <Stage
             ref={stageRef}
