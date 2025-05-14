@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import DesignCanvas from './DesignCanvas';
-import { RefreshCw, ZoomIn } from 'lucide-react';
+import { RefreshCw, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface PrintableAreaDimensions {
   top: number;
@@ -19,11 +19,21 @@ interface TShirtMockupProps {
 }
 
 const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintableArea, imageUrl, designSize, designRotation, onRotationChange }) => {
-  const designStyle = {
-    transform: `scale(${designSize / 100}) rotate(${designRotation}deg)`,
-    transformOrigin: 'center',
-    transition: 'transform 0.2s ease-in-out',
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.2, 2)); // Max zoom 2x
   };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.2, 0.5)); // Min zoom 0.5x
+  };
+
+  // const designStyle = {
+  //   transform: `scale(${designSize / 100}) rotate(${designRotation}deg)`,
+  //   transformOrigin: 'center',
+  //   transition: 'transform 0.2s ease-in-out',
+  // };
 
   return (
     <div className="w-3/5">
@@ -31,10 +41,19 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintabl
         {/* Preview controls */}
         <div className="flex justify-between mb-4">
           <div className="flex space-x-2">
-            <button className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
+            <button
+              onClick={handleZoomIn}
+              className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50"
+            >
               <ZoomIn />
             </button>
-            <button className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
+            <button
+              onClick={handleZoomOut}
+              className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50"
+            >
+              <ZoomOut />
+            </button>
+            <button onClick={() => setZoomLevel(1)} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
               <RefreshCw />
             </button>
           </div>
@@ -49,11 +68,16 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintabl
         </div>
 
         {/* Product preview */}
-        <div className="flex-grow flex items-center justify-center relative bg-white rounded-lg border border-gray-200">
-          {/* Konva stage container */}
-
-          {/* T-shirt silhouette */}
-          <div className="relative w-[500px] h-[500px]">
+        <div className="flex-grow flex items-center justify-center relative bg-white rounded-lg border border-gray-200 overflow-hidden">
+          {/* T-shirt container with zoom */}
+          <div
+            className="relative w-[500px] h-[500px] transition-transform duration-200"
+            style={{
+              transform: `scale(${zoomLevel})`,
+              transformOrigin: 'center center'
+            }}
+          >
+            {/* T-shirt silhouette */}
             <svg
               width="500"
               height="500"
