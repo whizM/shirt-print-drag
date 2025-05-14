@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import TShirtMockup from './components/TShirtMockup'
-import ImageUploader from './components/ImageUploader'
 import './App.css'
+import Header from './components/Header'
+import Right from './components/Right'
 
 function App() {
   const [imageUrl, setImageUrl] = useState<string>('')
@@ -19,14 +20,15 @@ function App() {
   }
 
   return (
-    <div className="relative w-screen h-screen">
-      <TShirtMockup
-        printableArea={printableArea}
-        showPrintableArea={true}
-        imageUrl={imageUrl}
-      />
-      <div className="absolute top-4 right-4 w-48">
-        <ImageUploader onImageUpload={handleImageUpload} />
+    <div className="min-h-screen bg-white">
+      <Header />
+      <div className="container mx-auto py-6 px-4 md:px-6 flex flex-col md:flex-row gap-8 w-screen justify-center">
+        <TShirtMockup
+          printableArea={printableArea}
+          showPrintableArea={true}
+          imageUrl={imageUrl}
+        />
+        <Right onImageUpload={handleImageUpload} />
       </div>
     </div>
   )

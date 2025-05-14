@@ -80,13 +80,15 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
     };
 
     return (
+
         <Stage
             width={500}
             height={500}
             style={{
                 position: 'absolute',
-                top: 100,
-                left: 350,
+                top: '20%',
+                left: '50%',
+                transform: 'translate(-50%, -20%)',
             }}
         >
             <Layer>
