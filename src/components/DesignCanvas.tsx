@@ -172,7 +172,6 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                             y={printableArea.top}
                             width={printableArea.width}
                             height={printableArea.height}
-                            stroke="#3B82F6"
                             strokeWidth={2}
                             dash={[4, 4]}
                             listening={false}
