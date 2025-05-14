@@ -31,6 +31,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
     const imageRef = useRef<Konva.Image>(null);
     const transformerRef = useRef<Konva.Transformer>(null);
     const [isSelected, setIsSelected] = useState(false);
+    const stageRef = useRef<Konva.Stage>(null);
 
     useEffect(() => {
         if (imageUrl) {
@@ -86,6 +87,27 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
         }
     }, [isSelected, image]);
 
+    // Add global click handler
+    useEffect(() => {
+        const handleGlobalClick = (e: MouseEvent) => {
+            // If we're not clicking on the Konva stage or its children
+            if (stageRef.current) {
+                const stageContainer = stageRef.current.container();
+                if (!stageContainer.contains(e.target as Node)) {
+                    setIsSelected(false);
+                }
+            }
+        };
+
+        // Add global click listener
+        document.addEventListener('mousedown', handleGlobalClick);
+
+        // Cleanup
+        return () => {
+            document.removeEventListener('mousedown', handleGlobalClick);
+        };
+    }, []);
+
     const checkDeselect = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
         const clickedOnEmpty = e.target === e.target.getStage();
         if (clickedOnEmpty) {
@@ -130,6 +152,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
 
     return (
         <Stage
+            ref={stageRef}
             width={500}
             height={500}
             style={{
