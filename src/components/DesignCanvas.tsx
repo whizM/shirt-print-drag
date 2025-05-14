@@ -10,18 +10,22 @@ interface DesignCanvasProps {
         width: number;
         height: number;
     };
+    designSize: number;
+    designRotation: number;
+    onRotationChange?: (rotation: number) => void;
 }
 
-const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) => {
+const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange }) => {
     const [image, setImage] = useState<HTMLImageElement | null>(null);
+    const [initialScale, setInitialScale] = useState(1);
     const [transform, setTransform] = useState({
         x: printableArea.left + printableArea.width / 2,
         y: printableArea.top + printableArea.height / 2,
         width: 100,
         height: 100,
-        rotation: 0,
-        scaleX: 1,
-        scaleY: 1,
+        rotation: designRotation,
+        scaleX: designSize / 100,
+        scaleY: designSize / 100,
     });
 
     const imageRef = React.useRef<Konva.Image>(null);
@@ -33,21 +37,33 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
             img.src = imageUrl;
             img.onload = () => {
                 setImage(img);
-                // Set initial size maintaining aspect ratio
+                // Calculate initial scale to fit the printable area
                 const scale = Math.min(
                     printableArea.width / img.width,
                     printableArea.height / img.height
                 ) * 0.8;
+                setInitialScale(scale);
                 setTransform(prev => ({
                     ...prev,
                     width: img.width,
                     height: img.height,
-                    scaleX: scale,
-                    scaleY: scale,
+                    scaleX: scale * (designSize / 100),
+                    scaleY: scale * (designSize / 100),
                 }));
             };
         }
     }, [imageUrl, printableArea]);
+
+    useEffect(() => {
+        if (initialScale) {
+            setTransform(prev => ({
+                ...prev,
+                scaleX: initialScale * (designSize / 100),
+                scaleY: initialScale * (designSize / 100),
+                rotation: designRotation
+            }));
+        }
+    }, [designSize, designRotation, initialScale]);
 
     useEffect(() => {
         if (transformerRef.current && imageRef.current) {
@@ -59,12 +75,20 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea }) 
     const handleTransformEnd = () => {
         if (imageRef.current) {
             const node = imageRef.current;
+            const newRotation = node.rotation();
+
+            // Normalize rotation to 0-360 range
+            const normalizedRotation = ((newRotation % 360) + 360) % 360;
+
+            // Update parent component's rotation state
+            onRotationChange?.(Math.round(normalizedRotation));
+
             setTransform({
                 x: node.x(),
                 y: node.y(),
                 width: node.width(),
                 height: node.height(),
-                rotation: node.rotation(),
+                rotation: normalizedRotation,
                 scaleX: node.scaleX(),
                 scaleY: node.scaleY(),
             });

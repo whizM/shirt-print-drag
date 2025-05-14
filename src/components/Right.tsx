@@ -1,7 +1,17 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
-const Right = ({ onImageUpload }: { onImageUpload: (file: File) => void }) => {
+interface RightProps {
+    onImageUpload: (file: File) => void;
+    onSizeChange?: (size: number) => void;
+    onRotationChange?: (rotation: number) => void;
+}
+
+const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationChange }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [size, setSize] = useState(100);
+    const [rotation, setRotation] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const [activeTab, setActiveTab] = useState('design');
 
     const handleUploadClick = () => {
         fileInputRef.current?.click();
@@ -14,22 +24,75 @@ const Right = ({ onImageUpload }: { onImageUpload: (file: File) => void }) => {
         }
     };
 
+    const handleSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newSize = parseInt(e.target.value);
+        setSize(newSize);
+        onSizeChange?.(newSize);
+    };
+
+    const handleRotationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newRotation = parseInt(e.target.value);
+        setRotation(newRotation);
+        onRotationChange?.(newRotation);
+    };
+
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        const files = Array.from(e.dataTransfer.files);
+        const imageFile = files.find(file => file.type.startsWith('image/'));
+
+        if (imageFile) {
+            onImageUpload(imageFile);
+        }
+    };
+
+    const handleTabClick = (tabName: string) => {
+        setActiveTab(tabName);
+    };
+
     return (
         <div className="w-full md:w-1/2 lg:w-2/5">
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                 {/* Tabs navigation */}
                 <div className="flex border-b border-gray-200">
-                    <button data-tab="product" className="tab-button py-3 px-4 text-gray-600 font-medium flex-1 text-center">Product</button>
-                    <button data-tab="color" className="tab-button py-3 px-4 text-gray-600 font-medium flex-1 text-center">Color</button>
-                    <button data-tab="design" className="tab-button active-tab py-3 px-4 font-medium flex-1 text-center">Design</button>
-                    <button data-tab="text" className="tab-button py-3 px-4 text-gray-600 font-medium flex-1 text-center">Text</button>
-                    <button data-tab="options" className="tab-button py-3 px-4 text-gray-600 font-medium flex-1 text-center">Options</button>
+                    {['product', 'color', 'design', 'text', 'options'].map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => handleTabClick(tab)}
+                            className={`py-3 px-4 font-medium flex-1 text-center capitalize
+                                ${activeTab === tab
+                                    ? 'text-indigo-600 border-b-2 border-indigo-600'
+                                    : 'text-gray-600 hover:text-gray-800'}`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Tab content container */}
-                <div id="tab-content" className="p-6">
-                    {/* Design Tab Content (shown by default) */}
-                    <div data-content="design" className="tab-content">
+                <div className="p-6">
+                    {/* Design Tab Content */}
+                    <div className={activeTab === 'design' ? '' : 'hidden'}>
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-2">
                                 <h3 className="text-lg font-medium text-gray-800">Design Zones</h3>
@@ -41,7 +104,7 @@ const Right = ({ onImageUpload }: { onImageUpload: (file: File) => void }) => {
 
                             {/* Design zones selector */}
                             <div className="grid grid-cols-3 gap-3 mb-4">
-                                <div id="zone-front" className="design-zone active-zone rounded-md p-2 cursor-pointer">
+                                <div id="zone-front" className="design-zone active-zone rounded-md p-2 cursor-pointer border border-indigo-400 bg-indigo-50">
                                     <div className="h-16 flex items-center justify-center">
                                         <div className="relative w-10 h-14">
                                             <div className="absolute inset-0 bg-gray-200 rounded"></div>
@@ -72,7 +135,7 @@ const Right = ({ onImageUpload }: { onImageUpload: (file: File) => void }) => {
                         </div>
 
                         {/* Drag & Drop Design Area */}
-                        <div id="design-upload-area" className="mb-6">
+                        <div className="mb-6">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-medium text-gray-800">Drag & Drop Design</h3>
                                 <div className="flex items-center">
@@ -81,90 +144,111 @@ const Right = ({ onImageUpload }: { onImageUpload: (file: File) => void }) => {
                                 </div>
                             </div>
 
-                            <div id="design-dropzone" className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-500 transition-colors cursor-pointer bg-gray-50">
-                                <img className="w-24 h-24 mx-auto mb-4" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/d16b92adec-0fba3240cb9b255c9658.png" alt="cloud upload icon" />
-                                <p className="text-gray-600 mb-1">Drag and drop your design files here</p>
+                            <div
+                                id="design-dropzone"
+                                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer bg-gray-50
+                                    ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-500'}`}
+                                onClick={handleUploadClick}
+                                onDragEnter={handleDragEnter}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                            >
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                />
+                                <img
+                                    className="w-24 h-24 mx-auto mb-4"
+                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/d16b92adec-0fba3240cb9b255c9658.png"
+                                    alt="cloud upload icon"
+                                />
+                                <p className="text-gray-600 mb-1">
+                                    {isDragging ? 'Drop your image here' : 'Drag and drop your design files here'}
+                                </p>
                                 <p className="text-gray-500 text-sm mb-4">PNG, JPG, SVG (Max 10MB)</p>
-                                <div className="flex justify-center">
-                                    <label htmlFor="file-upload" className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-6 rounded-md font-medium transition duration-200 mr-2 cursor-pointer">
-                                        Browse Files
-                                    </label>
-                                    <input id="file-upload" ref={fileInputRef} onChange={handleFileChange} type="file" accept="image/*" className="hidden" />
-                                    <button onClick={handleUploadClick} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded-md font-medium transition duration-200">
-                                        <i className="fa-brands fa-instagram mr-1"></i> Import
-                                    </button>
-                                </div>
+                                <button
+                                    className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleUploadClick();
+                                    }}
+                                >
+                                    Browse Files
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Other tab contents will be added dynamically */}
-                    <div data-content="product" className="tab-content hidden">
+                    {/* Product Tab Content */}
+                    <div className={activeTab === 'product' ? '' : 'hidden'}>
                         <h3 className="text-lg font-medium text-gray-800 mb-4">Product Selection</h3>
                         <p className="text-gray-600">Product options will be displayed here.</p>
                     </div>
 
-                    <div data-content="color" className="tab-content hidden">
+                    {/* Color Tab Content */}
+                    <div className={activeTab === 'color' ? '' : 'hidden'}>
                         <h3 className="text-lg font-medium text-gray-800 mb-4">Color Options</h3>
                         <p className="text-gray-600">Color selection will be displayed here.</p>
                     </div>
 
-                    <div data-content="text" className="tab-content hidden">
+                    {/* Text Tab Content */}
+                    <div className={activeTab === 'text' ? '' : 'hidden'}>
                         <h3 className="text-lg font-medium text-gray-800 mb-4">Text Customization</h3>
                         <p className="text-gray-600">Text editing options will be displayed here.</p>
                     </div>
 
-                    <div data-content="options" className="tab-content hidden">
+                    {/* Options Tab Content */}
+                    <div className={activeTab === 'options' ? '' : 'hidden'}>
                         <h3 className="text-lg font-medium text-gray-800 mb-4">Additional Options</h3>
                         <p className="text-gray-600">Additional customization options will be displayed here.</p>
                     </div>
                 </div>
             </div>
 
-            {/* Design Adjustment Tools */}
-            <div id="design-tools" className="mt-6 bg-white border border-gray-200 rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-800 mb-4">Design Adjustments</h3>
+            {/* Design Adjustment Tools - Only show when design tab is active */}
+            {activeTab === 'design' && (
+                <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-medium text-gray-800 mb-4">Design Adjustments</h3>
 
-                <div className="space-y-5">
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="text-sm font-medium text-gray-700">Size</label>
-                            <span id="size-value" className="text-xs text-gray-500">100%</span>
+                    <div className="space-y-5">
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm font-medium text-gray-700">Size</label>
+                                <span id="size-value" className="text-xs text-gray-500">{size}%</span>
+                            </div>
+                            <input
+                                id="size-slider"
+                                type="range"
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                min="20"
+                                max="200"
+                                value={size}
+                                onChange={handleSizeChange}
+                            />
                         </div>
-                        <input id="size-slider" type="range" className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" min="20" max="200" value="100" />
-                    </div>
 
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="text-sm font-medium text-gray-700">Rotation</label>
-                            <span id="rotation-value" className="text-xs text-gray-500">0°</span>
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm font-medium text-gray-700">Rotation</label>
+                                <span id="rotation-value" className="text-xs text-gray-500">{rotation}°</span>
+                            </div>
+                            <input
+                                id="rotation-slider"
+                                type="range"
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                min="0"
+                                max="360"
+                                value={rotation}
+                                onChange={handleRotationChange}
+                            />
                         </div>
-                        <input id="rotation-slider" type="range" className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" min="0" max="360" value="0" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <button id="position-btn" className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                            <i className="fa-solid fa-arrows-up-down-left-right mr-2"></i>
-                            <span className="text-sm">Position</span>
-                        </button>
-                        <button id="crop-btn" className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                            <i className="fa-solid fa-crop mr-2"></i>
-                            <span className="text-sm">Crop</span>
-                        </button>
-                    </div>
-
-                    <div className="flex justify-between">
-                        <button id="remove-btn" className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                            <i className="fa-solid fa-trash-alt mr-2 text-red-500"></i>
-                            <span className="text-sm">Remove</span>
-                        </button>
-                        <button id="apply-btn" className="flex items-center justify-center py-2 px-4 bg-indigo-600 rounded-md text-white hover:bg-indigo-700">
-                            <i className="fa-solid fa-check mr-2"></i>
-                            <span className="text-sm">Apply</span>
-                        </button>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Help section */}
             <div className="mt-6 bg-indigo-50 border border-indigo-100 rounded-lg p-4 flex items-start">

@@ -13,9 +13,18 @@ interface TShirtMockupProps {
   printableArea: PrintableAreaDimensions;
   showPrintableArea: boolean;
   imageUrl?: string;
+  designSize: number;
+  designRotation: number;
+  onRotationChange?: (rotation: number) => void;
 }
 
-const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintableArea, imageUrl }) => {
+const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintableArea, imageUrl, designSize, designRotation, onRotationChange }) => {
+  const designStyle = {
+    transform: `scale(${designSize / 100}) rotate(${designRotation}deg)`,
+    transformOrigin: 'center',
+    transition: 'transform 0.2s ease-in-out',
+  };
+
   return (
     <div className="w-3/5">
       <div className="bg-gray-50 rounded-lg p-4 h-[500px] md:h-[600px] flex flex-col">
@@ -74,6 +83,9 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintabl
                 <DesignCanvas
                   imageUrl={imageUrl}
                   printableArea={printableArea}
+                  designSize={designSize}
+                  designRotation={designRotation}
+                  onRotationChange={onRotationChange}
                 />
               )}
             </div>
@@ -94,7 +106,6 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintabl
         </div>
       </div>
     </div>
-
   );
 };
 

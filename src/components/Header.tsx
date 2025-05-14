@@ -11,7 +11,7 @@ const Header = () => {
                     <span className="ml-3 text-xl font-medium text-gray-800">CustomizeIt</span>
                 </div>
 
-                <div className="hidden items-center space-x-6">
+                <div className="hidden md:flex items-center space-x-6">
                     <div className="flex items-center">
                         <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-medium">1</div>
                         <span className="ml-2 font-medium text-indigo-600">Design</span>

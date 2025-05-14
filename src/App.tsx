@@ -6,10 +6,20 @@ import Right from './components/Right'
 
 function App() {
   const [imageUrl, setImageUrl] = useState<string>('')
+  const [designSize, setDesignSize] = useState(100)
+  const [designRotation, setDesignRotation] = useState(0)
 
   const handleImageUpload = (file: File) => {
     const url = URL.createObjectURL(file)
     setImageUrl(url)
+  }
+
+  const handleSizeChange = (size: number) => {
+    setDesignSize(size)
+  }
+
+  const handleRotationChange = (rotation: number) => {
+    setDesignRotation(rotation)
   }
 
   const printableArea = {
@@ -27,8 +37,15 @@ function App() {
           printableArea={printableArea}
           showPrintableArea={true}
           imageUrl={imageUrl}
+          designSize={designSize}
+          designRotation={designRotation}
+          onRotationChange={handleRotationChange}
         />
-        <Right onImageUpload={handleImageUpload} />
+        <Right
+          onImageUpload={handleImageUpload}
+          onSizeChange={handleSizeChange}
+          onRotationChange={handleRotationChange}
+        />
       </div>
     </div>
   )
