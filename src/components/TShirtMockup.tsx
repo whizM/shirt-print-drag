@@ -1,5 +1,6 @@
 import React from 'react';
 import DesignCanvas from './DesignCanvas';
+import { RefreshCw, ZoomIn } from 'lucide-react';
 
 interface PrintableAreaDimensions {
   top: number;
@@ -22,10 +23,10 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintabl
         <div className="flex justify-between mb-4">
           <div className="flex space-x-2">
             <button className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
-              <i className="fa-solid fa-magnifying-glass-plus"></i>
+              <ZoomIn />
             </button>
             <button className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
-              <i className="fa-solid fa-rotate"></i>
+              <RefreshCw />
             </button>
           </div>
           <div className="flex space-x-2">
