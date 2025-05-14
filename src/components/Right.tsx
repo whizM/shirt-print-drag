@@ -1,26 +1,56 @@
 import { useRef, useState } from "react";
+import Notification from "./Notification";
 
 interface RightProps {
     onImageUpload: (file: File) => void;
     onSizeChange?: (size: number) => void;
     onRotationChange?: (rotation: number) => void;
+    onZoneChange: (zone: 'front' | 'pocket' | 'back') => void;
+    selectedZone: 'front' | 'pocket' | 'back';
 }
 
-const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationChange }) => {
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
+const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationChange, onZoneChange, selectedZone }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [size, setSize] = useState(100);
     const [rotation, setRotation] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [activeTab, setActiveTab] = useState('design');
+    const [notification, setNotification] = useState<{
+        message: string;
+        type: 'error' | 'success' | 'warning';
+    } | null>(null);
 
     const handleUploadClick = () => {
         fileInputRef.current?.click();
     };
 
+    const validateAndUploadFile = (file: File) => {
+        if (file.size > MAX_FILE_SIZE) {
+            setNotification({
+                message: 'File size exceeds 10MB limit',
+                type: 'error'
+            });
+            return false;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            setNotification({
+                message: 'Please upload an image file',
+                type: 'error'
+            });
+            return false;
+        }
+
+        onImageUpload(file);
+        return true;
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            onImageUpload(files[0]);
+            validateAndUploadFile(files[0]);
         }
     };
 
@@ -62,7 +92,12 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
         const imageFile = files.find(file => file.type.startsWith('image/'));
 
         if (imageFile) {
-            onImageUpload(imageFile);
+            validateAndUploadFile(imageFile);
+        } else {
+            setNotification({
+                message: 'Please upload an image file',
+                type: 'error'
+            });
         }
     };
 
@@ -70,8 +105,21 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
         setActiveTab(tabName);
     };
 
+    const handleZoneClick = (zone: 'front' | 'pocket' | 'back') => {
+        onZoneChange(zone);
+    };
+
     return (
         <div className="w-full md:w-1/2 lg:w-2/5">
+            {/* Show notification if exists */}
+            {notification && (
+                <Notification
+                    message={notification.message}
+                    type={notification.type}
+                    onClose={() => setNotification(null)}
+                />
+            )}
+
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                 {/* Tabs navigation */}
                 <div className="flex border-b border-gray-200">
@@ -98,13 +146,23 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                                 <h3 className="text-lg font-medium text-gray-800">Design Zones</h3>
                                 <div className="flex items-center">
                                     <i className="fa-solid fa-circle-question text-gray-400 mr-2"></i>
-                                    <span className="text-sm text-indigo-600 cursor-pointer">How it works</span>
+                                    <span className="text-sm text-indigo-600 cursor-pointer flex gap-1 items-center">
+                                        <svg className="text-gray-500 w-4 h-4 svg-inline--fa fa-circle-question" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-question" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM169.8 165.3c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24V250.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1H222.6c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg>
+                                        How it works
+                                    </span>
                                 </div>
                             </div>
 
                             {/* Design zones selector */}
                             <div className="grid grid-cols-3 gap-3 mb-4">
-                                <div id="zone-front" className="design-zone active-zone rounded-md p-2 cursor-pointer border border-indigo-400 bg-indigo-50">
+                                <div
+                                    id="zone-front"
+                                    onClick={() => handleZoneClick('front')}
+                                    className={`design-zone rounded-md p-2 cursor-pointer border ${selectedZone === 'front'
+                                        ? 'border-indigo-400 bg-indigo-50'
+                                        : 'border-gray-200 hover:border-indigo-500 hover:bg-indigo-50'
+                                        }`}
+                                >
                                     <div className="h-16 flex items-center justify-center">
                                         <div className="relative w-10 h-14">
                                             <div className="absolute inset-0 bg-gray-200 rounded"></div>
@@ -113,7 +171,14 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                                     </div>
                                     <p className="text-center text-xs font-medium text-gray-800 mt-1">Front Center</p>
                                 </div>
-                                <div id="zone-pocket" className="design-zone border border-gray-200 rounded-md p-2 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50">
+                                <div
+                                    id="zone-pocket"
+                                    onClick={() => handleZoneClick('pocket')}
+                                    className={`design-zone rounded-md p-2 cursor-pointer border ${selectedZone === 'pocket'
+                                        ? 'border-indigo-400 bg-indigo-50'
+                                        : 'border-gray-200 hover:border-indigo-500 hover:bg-indigo-50'
+                                        }`}
+                                >
                                     <div className="h-16 flex items-center justify-center">
                                         <div className="relative w-10 h-14">
                                             <div className="absolute inset-0 bg-gray-200 rounded"></div>
@@ -122,7 +187,14 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                                     </div>
                                     <p className="text-center text-xs font-medium text-gray-800 mt-1">Pocket</p>
                                 </div>
-                                <div id="zone-back" className="design-zone border border-gray-200 rounded-md p-2 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50">
+                                <div
+                                    id="zone-back"
+                                    onClick={() => handleZoneClick('back')}
+                                    className={`design-zone rounded-md p-2 cursor-pointer border ${selectedZone === 'back'
+                                        ? 'border-indigo-400 bg-indigo-50'
+                                        : 'border-gray-200 hover:border-indigo-500 hover:bg-indigo-50'
+                                        }`}
+                                >
                                     <div className="h-16 flex items-center justify-center">
                                         <div className="relative w-10 h-14">
                                             <div className="absolute inset-0 bg-gray-200 rounded"></div>
@@ -139,8 +211,9 @@ const Right: React.FC<RightProps> = ({ onImageUpload, onSizeChange, onRotationCh
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-medium text-gray-800">Drag & Drop Design</h3>
                                 <div className="flex items-center">
-                                    <span className="text-xs text-gray-500 mr-2">Max size: 10MB</span>
-                                    <i className="fa-solid fa-circle-info text-gray-400 cursor-pointer"></i>
+                                    <span className="text-xs text-gray-500 mr-2 flex gap-1 items-center">Max size: 10MB
+                                        <svg className="w-4 h-4 svg-inline--fa fa-circle-info" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-info" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336h24V272H216c-13.3 0-24-10.7-24-24s10.7-24 24-24h48c13.3 0 24 10.7 24 24v88h8c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"></path></svg>
+                                    </span>
                                 </div>
                             </div>
 

@@ -1,6 +1,25 @@
 import React, { useState } from 'react';
 import DesignCanvas from './DesignCanvas';
-import { RefreshCw, ZoomIn, ZoomOut } from 'lucide-react';
+import { RefreshCw, ZoomIn, ZoomOut, ChevronDown } from 'lucide-react';
+
+// Import t-shirt images
+const tshirtImages = {
+  front: {
+    white: '/images/tshirt-front-white.png',
+    black: '/images/tshirt-front-black.png',
+  },
+  back: {
+    white: '/images/tshirt-back-white.png',
+    black: '/images/tshirt-back-black.png',
+  }
+};
+
+// Add shirt styles
+const shirtStyles = [
+  { id: 'tshirt', name: 'Classic T-Shirt', color: 'white' },
+  { id: 'tshirt-black', name: 'Classic T-Shirt', color: 'black' },
+  // Add more shirt styles as needed
+];
 
 interface PrintableAreaDimensions {
   top: number;
@@ -18,22 +37,35 @@ interface TShirtMockupProps {
   onRotationChange?: (rotation: number) => void;
 }
 
-const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintableArea, imageUrl, designSize, designRotation, onRotationChange }) => {
+const TShirtMockup: React.FC<TShirtMockupProps> = ({
+  printableArea,
+  showPrintableArea,
+  imageUrl,
+  designSize,
+  designRotation,
+  onRotationChange,
+}) => {
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
+  const [currentColor, setCurrentColor] = useState<'white' | 'black'>('white');
+  const [isShirtSelectorOpen, setIsShirtSelectorOpen] = useState(false);
 
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.2, 2)); // Max zoom 2x
+    setZoomLevel(prev => Math.min(prev + 0.2, 2));
   };
 
   const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.2, 0.5)); // Min zoom 0.5x
+    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
   };
 
-  // const designStyle = {
-  //   transform: `scale(${designSize / 100}) rotate(${designRotation}deg)`,
-  //   transformOrigin: 'center',
-  //   transition: 'transform 0.2s ease-in-out',
-  // };
+  const handleViewChange = (view: 'front' | 'back') => {
+    setCurrentView(view);
+  };
+
+  const handleColorChange = (color: 'white' | 'black') => {
+    setCurrentColor(color);
+    setIsShirtSelectorOpen(false);
+  };
 
   return (
     <div className="w-3/5">
@@ -41,27 +73,62 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintabl
         {/* Preview controls */}
         <div className="flex justify-between mb-4">
           <div className="flex space-x-2">
-            <button
-              onClick={handleZoomIn}
-              className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50"
-            >
+            {/* Shirt selector dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsShirtSelectorOpen(!isShirtSelectorOpen)}
+                className="bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm flex items-center gap-2"
+              >
+                <span>Select Style</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              {isShirtSelectorOpen && (
+                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  {shirtStyles.map((style) => (
+                    <button
+                      key={`${style.id}-${style.color}`}
+                      onClick={() => handleColorChange(style.color as 'white' | 'black')}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full border ${style.color === 'white' ? 'bg-pink-200' : 'bg-green-700'
+                          }`}
+                      />
+                      <span className='text-black'>{style.name}</span>
+                      {currentColor === style.color && (
+                        <span className="ml-auto text-indigo-600">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Existing zoom controls */}
+            <button onClick={handleZoomIn} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
               <ZoomIn />
             </button>
-            <button
-              onClick={handleZoomOut}
-              className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50"
-            >
+            <button onClick={handleZoomOut} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
               <ZoomOut />
             </button>
             <button onClick={() => setZoomLevel(1)} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
               <RefreshCw />
             </button>
           </div>
+
+          {/* Existing view controls */}
           <div className="flex space-x-2">
-            <button id="view-front" className="bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm active">
+            <button
+              onClick={() => handleViewChange('front')}
+              className={`bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm ${currentView === 'front' ? 'border-indigo-500 text-indigo-600' : ''}`}
+            >
               Front
             </button>
-            <button id="view-back" className="bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm">
+            <button
+              onClick={() => handleViewChange('back')}
+              className={`bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm ${currentView === 'back' ? 'border-indigo-500 text-indigo-600' : ''}`}
+            >
               Back
             </button>
           </div>
@@ -69,7 +136,6 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintabl
 
         {/* Product preview */}
         <div className="flex-grow flex items-center justify-center relative bg-white rounded-lg border border-gray-200 overflow-hidden">
-          {/* T-shirt container with zoom */}
           <div
             className="relative w-[500px] h-[500px] transition-transform duration-200"
             style={{
@@ -77,29 +143,15 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({ printableArea, showPrintabl
               transformOrigin: 'center center'
             }}
           >
-            {/* T-shirt silhouette */}
-            <svg
-              width="500"
-              height="500"
-              viewBox="0 0 500 500"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="absolute"
-            >
-              <path
-                d="M125 80C125 80 150 60 250 60C350 60 375 80 375 80L400 110C400 110 410 115 415 110C420 105 450 90 450 90L430 180L390 160V400C390 400 380 420 250 420C120 420 110 400 110 400V160L70 180L50 90C50 90 80 105 85 110C90 115 100 110 100 110L125 80Z"
-                fill="white"
-                stroke="#CBD5E1"
-                strokeWidth="2"
-              />
-              {/* Collar */}
-              <path
-                d="M220 80C220 80 235 95 250 95C265 95 280 80 280 80"
-                stroke="#CBD5E1"
-                strokeWidth="2"
-                fill="none"
-              />
-            </svg>
+            {/* T-shirt image */}
+            <img
+              src={tshirtImages[currentView][currentColor]}
+              alt={`T-shirt ${currentView} view`}
+              className="absolute inset-0 w-full h-full object-contain"
+              style={{
+                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))'
+              }}
+            />
 
             {/* Design Canvas */}
             <div className="absolute inset-0">

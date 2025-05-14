@@ -4,10 +4,32 @@ import './App.css'
 import Header from './components/Header'
 import Right from './components/Right'
 
+const PRINTABLE_AREAS = {
+  front: {
+    top: 120,
+    left: 150,
+    width: 200,
+    height: 220,
+  },
+  pocket: {
+    top: 100,
+    left: 280,
+    width: 80,
+    height: 80,
+  },
+  back: {
+    top: 80,
+    left: 150,
+    width: 200,
+    height: 200,
+  }
+};
+
 function App() {
   const [imageUrl, setImageUrl] = useState<string>('')
   const [designSize, setDesignSize] = useState(100)
   const [designRotation, setDesignRotation] = useState(0)
+  const [selectedZone, setSelectedZone] = useState<'front' | 'pocket' | 'back'>('front')
 
   const handleImageUpload = (file: File) => {
     const url = URL.createObjectURL(file)
@@ -22,11 +44,8 @@ function App() {
     setDesignRotation(rotation)
   }
 
-  const printableArea = {
-    top: 120,
-    left: 150,
-    width: 200,
-    height: 220,
+  const handleZoneChange = (zone: 'front' | 'pocket' | 'back') => {
+    setSelectedZone(zone)
   }
 
   return (
@@ -34,7 +53,7 @@ function App() {
       <Header />
       <div className="container mx-auto py-6 px-4 md:px-6 flex flex-col md:flex-row gap-8 w-screen justify-center">
         <TShirtMockup
-          printableArea={printableArea}
+          printableArea={PRINTABLE_AREAS[selectedZone]}
           showPrintableArea={true}
           imageUrl={imageUrl}
           designSize={designSize}
@@ -45,6 +64,8 @@ function App() {
           onImageUpload={handleImageUpload}
           onSizeChange={handleSizeChange}
           onRotationChange={handleRotationChange}
+          onZoneChange={handleZoneChange}
+          selectedZone={selectedZone}
         />
       </div>
     </div>
