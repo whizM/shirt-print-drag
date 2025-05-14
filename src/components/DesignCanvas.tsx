@@ -24,7 +24,7 @@ interface DesignCanvasProps {
     }>;
 }
 
-const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange, text, textFontSize = 24, textColor = '#000000', texts }) => {
+const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange, texts }) => {
     const [image] = useImage(imageUrl);
     const [initialScale, setInitialScale] = useState(1);
     const [transform, setTransform] = useState({

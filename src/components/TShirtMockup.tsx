@@ -35,9 +35,6 @@ interface TShirtMockupProps {
   designSize: number;
   designRotation: number;
   onRotationChange?: (rotation: number) => void;
-  text?: string;
-  textFontSize?: number;
-  textColor?: string;
   texts: Array<{
     text: string;
     fontSize: number;
@@ -52,9 +49,6 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
   designSize,
   designRotation,
   onRotationChange,
-  text,
-  textFontSize,
-  textColor,
   texts
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
