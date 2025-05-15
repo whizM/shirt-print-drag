@@ -1,7 +1,7 @@
 import { useState, useImperativeHandle, forwardRef, useRef } from 'react';
 import DesignCanvas from './DesignCanvas';
 import type { DesignCanvasRef } from './DesignCanvas';
-import { RefreshCw, ZoomIn, ZoomOut, ChevronDown } from 'lucide-react';
+import { RefreshCw, ZoomIn, ZoomOut, ChevronDown, RotateCcw, RotateCw } from 'lucide-react';
 
 // Import t-shirt images
 const tshirtImages = {
@@ -74,7 +74,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   isFullFront = false,
 }, ref) => {
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [currentView] = useState<'front'>('front');
+  const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
   const [currentColor, setCurrentColor] = useState<'white' | 'black'>('white');
   const [isShirtSelectorOpen, setIsShirtSelectorOpen] = useState(false);
   const canvasRef = useRef<DesignCanvasRef>(null);
@@ -111,6 +111,10 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   const handleColorChange = (color: 'white' | 'black') => {
     setCurrentColor(color);
     setIsShirtSelectorOpen(false);
+  };
+
+  const handleViewChange = (view: 'front' | 'back') => {
+    setCurrentView(view);
   };
 
   return (
@@ -162,6 +166,30 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               <RefreshCw />
             </button>
           </div>
+
+          {/* Add front/back view toggle buttons */}
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handleViewChange('front')}
+              className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${currentView === 'front'
+                ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                }`}
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Front</span>
+            </button>
+            <button
+              onClick={() => handleViewChange('back')}
+              className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${currentView === 'back'
+                ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                }`}
+            >
+              <RotateCw className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+          </div>
         </div>
 
         {/* Product preview */}
@@ -183,7 +211,6 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               }}
             />
 
-            {/* Design Canvas */}
             <div className="absolute inset-0">
               <DesignCanvas
                 ref={canvasRef}
@@ -202,7 +229,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               />
             </div>
 
-            {/* Printable area visualization */}
+            {/* Printable area visualization*/}
             {showPrintableArea && (
               <div
                 className="absolute border-2 border-dashed border-blue-400 bg-blue-50 bg-opacity-10 pointer-events-none"
