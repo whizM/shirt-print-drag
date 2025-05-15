@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState, useImperativeHandle, forwardRef, useRef } from 'react';
 import DesignCanvas from './DesignCanvas';
+import type { DesignCanvasRef } from './DesignCanvas';
 import { RefreshCw, ZoomIn, ZoomOut, ChevronDown } from 'lucide-react';
 
 // Import t-shirt images
@@ -43,9 +44,20 @@ interface TShirtMockupProps {
   }>;
   onTextSelect?: (id: string) => void;
   selectedTextId?: string | null;
+  isImageSelected?: boolean;
+  onImageSelect?: () => void;
+  onImageDeselect?: () => void;
 }
 
-const TShirtMockup: React.FC<TShirtMockupProps> = ({
+// Make sure the interface is exported
+export interface TShirtMockupRef {
+  setPosition: (x: number, y: number) => void;
+  getImageDimensions: () => { width: number; height: number; scaleX: number; scaleY: number } | null;
+  getPosition: () => { x: number; y: number } | null;
+}
+
+// Update to use forwardRef
+const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   printableArea,
   showPrintableArea,
   imageUrl,
@@ -54,12 +66,37 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
   onRotationChange,
   texts,
   onTextSelect,
-  selectedTextId
-}) => {
+  selectedTextId,
+  isImageSelected,
+  onImageSelect,
+  onImageDeselect,
+}, ref) => {
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
+  const [currentView] = useState<'front'>('front');
   const [currentColor, setCurrentColor] = useState<'white' | 'black'>('white');
   const [isShirtSelectorOpen, setIsShirtSelectorOpen] = useState(false);
+  const canvasRef = useRef<DesignCanvasRef>(null);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    setPosition: (x: number, y: number) => {
+      if (canvasRef.current) {
+        canvasRef.current.setPosition(x, y);
+      }
+    },
+    getImageDimensions: () => {
+      if (canvasRef.current) {
+        return canvasRef.current.getImageDimensions();
+      }
+      return null;
+    },
+    getPosition: () => {
+      if (canvasRef.current) {
+        return canvasRef.current.getPosition();
+      }
+      return null;
+    }
+  }));
 
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 2));
@@ -67,10 +104,6 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
 
   const handleZoomOut = () => {
     setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
-  };
-
-  const handleViewChange = (view: 'front' | 'back') => {
-    setCurrentView(view);
   };
 
   const handleColorChange = (color: 'white' | 'black') => {
@@ -127,22 +160,6 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
               <RefreshCw />
             </button>
           </div>
-
-          {/* Existing view controls */}
-          <div className="flex space-x-2">
-            <button
-              onClick={() => handleViewChange('front')}
-              className={`bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm ${currentView === 'front' ? 'border-indigo-500 text-indigo-600' : ''}`}
-            >
-              Front
-            </button>
-            <button
-              onClick={() => handleViewChange('back')}
-              className={`bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm ${currentView === 'back' ? 'border-indigo-500 text-indigo-600' : ''}`}
-            >
-              Back
-            </button>
-          </div>
         </div>
 
         {/* Product preview */}
@@ -167,6 +184,7 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
             {/* Design Canvas */}
             <div className="absolute inset-0">
               <DesignCanvas
+                ref={canvasRef}
                 imageUrl={imageUrl || ''}
                 printableArea={printableArea}
                 designSize={designSize}
@@ -175,6 +193,9 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
                 texts={texts}
                 onTextSelect={onTextSelect}
                 selectedTextId={selectedTextId}
+                isImageSelected={isImageSelected}
+                onImageSelect={onImageSelect}
+                onImageDeselect={onImageDeselect}
               />
             </div>
 
@@ -195,6 +216,6 @@ const TShirtMockup: React.FC<TShirtMockupProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default TShirtMockup;

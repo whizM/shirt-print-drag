@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { Stage, Layer, Image, Transformer, Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import useImage from 'use-image';
@@ -25,9 +25,32 @@ interface DesignCanvasProps {
     }>;
     onTextSelect?: (id: string) => void;
     selectedTextId?: string | null;
+    isImageSelected?: boolean;
+    onImageSelect?: () => void;
+    onImageDeselect?: () => void;
 }
 
-const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, designSize, designRotation, onRotationChange, texts, onTextSelect, selectedTextId }) => {
+// Add ref type
+export interface DesignCanvasRef {
+    setPosition: (x: number, y: number) => void;
+    getImageDimensions: () => { width: number; height: number; scaleX: number; scaleY: number } | null;
+    getPosition: () => { x: number; y: number } | null;
+}
+
+// Update to use forwardRef
+const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
+    imageUrl,
+    printableArea,
+    designSize,
+    designRotation,
+    onRotationChange,
+    texts,
+    onTextSelect,
+    selectedTextId,
+    isImageSelected,
+    onImageSelect,
+    onImageDeselect
+}, ref) => {
     const [image] = useImage(imageUrl);
     const [initialScale, setInitialScale] = useState(1);
     const [transform, setTransform] = useState({
@@ -39,6 +62,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
         scaleX: designSize / 100,
         scaleY: designSize / 100,
     });
+    console.log(transform);
     const imageRef = useRef<Konva.Image>(null);
     const transformerRef = useRef<Konva.Transformer>(null);
     const [isSelected, setIsSelected] = useState(false);
@@ -91,13 +115,18 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
     }, [image, printableArea, designSize]);
 
     useEffect(() => {
-        if (initialScale) {
-            setTransform(prev => ({
-                ...prev,
-                scaleX: initialScale * (designSize / 100),
-                scaleY: initialScale * (designSize / 100),
-                rotation: designRotation
-            }));
+        setTransform(prev => ({
+            ...prev,
+            rotation: designRotation,
+            scaleX: initialScale * (designSize / 100),
+            scaleY: initialScale * (designSize / 100),
+        }));
+
+        if (imageRef.current) {
+            imageRef.current.scaleX(initialScale * (designSize / 100));
+            imageRef.current.scaleY(initialScale * (designSize / 100));
+            imageRef.current.rotation(designRotation);
+            imageRef.current.getLayer()?.batchDraw();
         }
     }, [designSize, designRotation, initialScale]);
 
@@ -132,12 +161,41 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
         };
     }, []);
 
-    // Update image selection handler
-    const handleImageSelect = (e: Konva.KonvaEventObject<MouseEvent>) => {
-        e.cancelBubble = true; // Stop event propagation
-        setSelectedId(null);
-        setSelectedType('image');
+    // Update useEffect to handle image selection
+    useEffect(() => {
+        if (image && isImageSelected) {
+            setIsSelected(true);
+            setSelectedType('image');
+            if (imageRef.current && transformerRef.current) {
+                transformerRef.current.nodes([imageRef.current]);
+                transformerRef.current.getLayer()?.batchDraw();
+            }
+        }
+    }, [image, isImageSelected]);
+
+    // Update click handler to manage image selection
+    const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+        const clickedOnEmpty = e.target === e.target.getStage();
+        if (clickedOnEmpty) {
+            setIsSelected(false);
+            setSelectedType(null);
+            setSelectedId(null);
+            onImageDeselect?.();
+            if (onTextSelect) {
+                onTextSelect('');
+            }
+        }
+    };
+
+    const handleImageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+        e.cancelBubble = true;
         setIsSelected(true);
+        setSelectedType('image');
+        setSelectedId(null);
+        onImageSelect?.();
+        if (onTextSelect) {
+            onTextSelect('');
+        }
     };
 
     // Update text selection handler
@@ -301,6 +359,46 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
         }
     }, [selectedTextId, textElements]);
 
+    // Expose methods via ref
+    useImperativeHandle(ref, () => ({
+        setPosition: (x: number, y: number) => {
+            if (imageRef.current) {
+                setTransform(prev => ({
+                    ...prev,
+                    x,
+                    y
+                }));
+
+                // Update the image position
+                imageRef.current.x(x);
+                imageRef.current.y(y);
+
+                // Redraw the layer
+                imageRef.current.getLayer()?.batchDraw();
+            }
+        },
+        getImageDimensions: () => {
+            if (image) {
+                return {
+                    width: transform.width,
+                    height: transform.height,
+                    scaleX: transform.scaleX,
+                    scaleY: transform.scaleY
+                };
+            }
+            return null;
+        },
+        getPosition: () => {
+            if (imageRef.current) {
+                return {
+                    x: transform.x,
+                    y: transform.y
+                };
+            }
+            return null;
+        }
+    }));
+
     return (
         <Stage
             ref={stageRef}
@@ -308,15 +406,16 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
             height={500}
             style={{
                 position: 'absolute',
-                top: '20%',
-                left: '50%',
-                transform: 'translate(-50%, -20%)',
+                top: '0',
+                left: '0',
+                width: '100%',
+                height: '100%',
+                transform: 'none',
             }}
-            onClick={checkDeselect}
+            onClick={handleStageClick}
             onTap={checkDeselect}
         >
             <Layer>
-                {/* Render image first */}
                 {image && (
                     <>
                         {/* Main draggable image */}
@@ -334,7 +433,7 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
                             scaleY={transform.scaleY}
                             opacity={0.3}
                             draggable
-                            onClick={handleImageSelect}
+                            onClick={handleImageClick}
                             onDragEnd={handleDragEnd}
                             onTransformEnd={handleTransformEnd}
                             onTransform={handleTransformEnd}
@@ -456,6 +555,6 @@ const DesignCanvas: React.FC<DesignCanvasProps> = ({ imageUrl, printableArea, de
             </Layer>
         </Stage>
     );
-};
+});
 
 export default DesignCanvas; 

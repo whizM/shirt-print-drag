@@ -1,12 +1,12 @@
 import { useRef, useState, useEffect } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import Notification from "./Notification";
+import { AlignHorizontalSpaceAround, AlignVerticalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalSpaceAround, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd, Trash2, Upload } from "lucide-react";
 
 interface RightProps {
     onImageUpload: (file: File) => void;
     onSizeChange?: (size: number) => void;
     onRotationChange?: (rotation: number) => void;
-    onZoneChange: (zone: 'front' | 'pocket' | 'back') => void;
-    selectedZone: 'front' | 'pocket' | 'back';
     onTextAdd?: (text: string, fontSize: number, color: string) => void;
     onTextUpdate?: (id: string, text: string, fontSize: number, color: string) => void;
     selectedTextId?: string | null;
@@ -17,6 +17,11 @@ interface RightProps {
         color: string;
     } | null;
     onTextDelete?: (id: string) => void;
+    onAlignmentChange?: (alignment: { horizontal?: 'left' | 'center' | 'right', vertical?: 'top' | 'middle' | 'bottom' }) => void;
+    onPositionPreset?: (preset: 'center' | 'pocket' | 'full-front') => void;
+    isImageSelected?: boolean;
+    onImageDelete?: () => void;
+    setIsImageSelected?: Dispatch<SetStateAction<boolean>>;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
@@ -25,13 +30,16 @@ const Right: React.FC<RightProps> = ({
     onImageUpload,
     onSizeChange,
     onRotationChange,
-    onZoneChange,
-    selectedZone,
     onTextAdd,
     onTextUpdate,
     selectedTextId,
     selectedText,
-    onTextDelete
+    onTextDelete,
+    onAlignmentChange,
+    onPositionPreset,
+    isImageSelected,
+    setIsImageSelected,
+    onImageDelete
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [size, setSize] = useState(100);
@@ -142,10 +150,6 @@ const Right: React.FC<RightProps> = ({
         setActiveTab(tabName);
     };
 
-    const handleZoneClick = (zone: 'front' | 'pocket' | 'back') => {
-        onZoneChange(zone);
-    };
-
     const handleTextAction = () => {
         if (text.trim()) {
             if (isEditing && selectedTextId && onTextUpdate) {
@@ -168,8 +172,22 @@ const Right: React.FC<RightProps> = ({
         setIsEditing(false);
     };
 
+    const handleHorizontalAlign = (alignment: 'left' | 'center' | 'right') => {
+        // Get current vertical alignment and keep it
+        onAlignmentChange?.({ horizontal: alignment });
+    };
+
+    const handleVerticalAlign = (alignment: 'top' | 'middle' | 'bottom') => {
+        // Get current horizontal alignment and keep it
+        onAlignmentChange?.({ vertical: alignment });
+    };
+
+    const handlePositionPreset = (preset: 'center' | 'pocket' | 'full-front') => {
+        onPositionPreset?.(preset);
+    };
+
     return (
-        <div className="w-full md:w-1/2 lg:w-2/5">
+        <div className="w-2/5 bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-fit">
             {notification && (
                 <Notification
                     message={notification.message}
@@ -178,133 +196,194 @@ const Right: React.FC<RightProps> = ({
                 />
             )}
 
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="flex border-b border-gray-200">
-                    {['product', 'color', 'design', 'text', 'options'].map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => handleTabClick(tab)}
-                            className={`py-3 px-4 font-medium flex-1 text-center capitalize
-                                ${activeTab === tab
-                                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                                    : 'text-gray-600 hover:text-gray-800'}`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
-                </div>
+            <div className="flex border-b border-gray-200">
+                {['product', 'color', 'design', 'text', 'options'].map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => handleTabClick(tab)}
+                        className={`py-3 px-4 font-medium flex-1 text-center capitalize
+                            ${activeTab === tab
+                                ? 'text-indigo-600 border-b-2 border-indigo-600'
+                                : 'text-gray-600 hover:text-gray-800'}`}
+                    >
+                        {tab}
+                    </button>
+                ))}
+            </div>
 
-                <div className="p-6">
+            <div className="mt-6">
+                <div>
                     <div className={activeTab === 'design' ? '' : 'hidden'}>
-                        <div className="mb-6">
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-lg font-medium text-gray-800">Design Zones</h3>
-                                <div className="flex items-center">
-                                    <i className="fa-solid fa-circle-question text-gray-400 mr-2"></i>
-                                    <span className="text-sm text-indigo-600 cursor-pointer flex gap-1 items-center">
-                                        <svg className="text-gray-500 w-4 h-4 svg-inline--fa fa-circle-question" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-question" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM169.8 165.3c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24V250.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1H222.6c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg>
-                                        How it works
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3 mb-4">
-                                <div
-                                    id="zone-front"
-                                    onClick={() => handleZoneClick('front')}
-                                    className={`design-zone rounded-md p-2 cursor-pointer border ${selectedZone === 'front'
-                                        ? 'border-indigo-400 bg-indigo-50'
-                                        : 'border-gray-200 hover:border-indigo-500 hover:bg-indigo-50'
-                                        }`}
-                                >
-                                    <div className="h-16 flex items-center justify-center">
-                                        <div className="relative w-10 h-14">
-                                            <div className="absolute inset-0 bg-gray-200 rounded"></div>
-                                            <div className="absolute top-[30%] left-[20%] w-[60%] h-[40%] border-2 border-dashed border-indigo-400 rounded"></div>
-                                        </div>
-                                    </div>
-                                    <p className="text-center text-xs font-medium text-gray-800 mt-1">Front Center</p>
-                                </div>
-                                <div
-                                    id="zone-pocket"
-                                    onClick={() => handleZoneClick('pocket')}
-                                    className={`design-zone rounded-md p-2 cursor-pointer border ${selectedZone === 'pocket'
-                                        ? 'border-indigo-400 bg-indigo-50'
-                                        : 'border-gray-200 hover:border-indigo-500 hover:bg-indigo-50'
-                                        }`}
-                                >
-                                    <div className="h-16 flex items-center justify-center">
-                                        <div className="relative w-10 h-14">
-                                            <div className="absolute inset-0 bg-gray-200 rounded"></div>
-                                            <div className="absolute top-[15%] left-[60%] w-[30%] h-[20%] border-2 border-dashed border-gray-400 rounded"></div>
-                                        </div>
-                                    </div>
-                                    <p className="text-center text-xs font-medium text-gray-800 mt-1">Pocket</p>
-                                </div>
-                                <div
-                                    id="zone-back"
-                                    onClick={() => handleZoneClick('back')}
-                                    className={`design-zone rounded-md p-2 cursor-pointer border ${selectedZone === 'back'
-                                        ? 'border-indigo-400 bg-indigo-50'
-                                        : 'border-gray-200 hover:border-indigo-500 hover:bg-indigo-50'
-                                        }`}
-                                >
-                                    <div className="h-16 flex items-center justify-center">
-                                        <div className="relative w-10 h-14">
-                                            <div className="absolute inset-0 bg-gray-200 rounded"></div>
-                                            <div className="absolute top-[20%] left-[20%] w-[60%] h-[40%] border-2 border-dashed border-gray-400 rounded"></div>
-                                        </div>
-                                    </div>
-                                    <p className="text-center text-xs font-medium text-gray-800 mt-1">Back</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mb-6">
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="font-medium text-gray-800">Drag & Drop Design</h3>
-                                <div className="flex items-center">
-                                    <span className="text-xs text-gray-500 mr-2 flex gap-1 items-center">Max size: 10MB
-                                        <svg className="w-4 h-4 svg-inline--fa fa-circle-info" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-info" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336h24V272H216c-13.3 0-24-10.7-24-24s10.7-24 24-24h48c13.3 0 24 10.7 24 24v88h8c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"></path></svg>
-                                    </span>
-                                </div>
-                            </div>
-
+                        {!isImageSelected ? (
+                            // Show drag & drop area when no image is selected
                             <div
-                                id="design-dropzone"
-                                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer bg-gray-50
-                                    ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-500'}`}
-                                onClick={handleUploadClick}
+                                className={`border-2 ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-dashed border-gray-300'} rounded-lg p-6 text-center`}
                                 onDragEnter={handleDragEnter}
-                                onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
+                                onDragOver={handleDragOver}
                                 onDrop={handleDrop}
                             >
                                 <input
-                                    ref={fileInputRef}
                                     type="file"
+                                    ref={fileInputRef}
                                     className="hidden"
                                     accept="image/*"
                                     onChange={handleFileChange}
                                 />
-                                <img
-                                    className="w-24 h-24 mx-auto mb-4"
-                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/d16b92adec-0fba3240cb9b255c9658.png"
-                                    alt="cloud upload icon"
-                                />
-                                <p className="text-gray-600 mb-1">
-                                    {isDragging ? 'Drop your image here' : 'Drag and drop your design files here'}
-                                </p>
-                                <p className="text-gray-500 text-sm mb-4">PNG, JPG, SVG (Max 10MB)</p>
+                                <div className="flex flex-col items-center justify-center space-y-3">
+                                    <div className="p-3 bg-indigo-50 rounded-full">
+                                        <svg className="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-700 font-medium">Drag & drop your design here</p>
+                                        <p className="text-gray-500 text-sm mt-1">or</p>
+                                    </div>
+                                    <button
+                                        onClick={handleUploadClick}
+                                        className="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                    >
+                                        Browse Files
+                                    </button>
+                                    <p className="text-xs text-gray-500 mt-2">Supported formats: PNG, JPG, GIF (max 10MB)</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex space-x-2">
                                 <button
-                                    className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleUploadClick();
-                                    }}
+                                    onClick={() => onImageDelete?.()}
+                                    className="flex-1 bg-red-50 text-red-600 border border-red-200 py-2 px-4 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center"
                                 >
-                                    Browse Files
+                                    <Trash2 className="mr-2" size={18} />
+                                    Delete Image
                                 </button>
+                                <button
+                                    onClick={() => setIsImageSelected?.(false)}
+                                    className="flex-1 bg-indigo-50 text-indigo-600 border border-indigo-200 py-2 px-4 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center"
+                                >
+                                    <Upload className="mr-2" size={18} />
+                                    Add New Image
+                                </button>
+                            </div>
+                        )}
+                        <div className="flex flex-col space-y-4">
+                            {/* Position presets */}
+                            <div className="mt-6 border-t pt-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Position Presets
+                                </label>
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => handlePositionPreset('center')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        Center
+                                    </button>
+                                    <button
+                                        onClick={() => handlePositionPreset('full-front')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        Full Front
+                                    </button>
+                                    <button
+                                        onClick={() => handlePositionPreset('pocket')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        Pocket
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Alignment controls */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Horizontal Alignment
+                                </label>
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => handleHorizontalAlign('left')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 flex items-center justify-center text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <AlignHorizontalJustifyStart />
+                                    </button>
+                                    <button
+                                        onClick={() => handleHorizontalAlign('center')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 flex items-center justify-center text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <AlignHorizontalSpaceAround />
+                                    </button>
+                                    <button
+                                        onClick={() => handleHorizontalAlign('right')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 flex items-center justify-center text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <AlignHorizontalJustifyEnd />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Vertical Alignment
+                                </label>
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => handleVerticalAlign('top')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 flex items-center justify-center text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <AlignVerticalJustifyStart />
+                                    </button>
+                                    <button
+                                        onClick={() => handleVerticalAlign('middle')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 flex items-center justify-center text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <AlignVerticalSpaceAround />
+                                    </button>
+                                    <button
+                                        onClick={() => handleVerticalAlign('bottom')}
+                                        className="flex-1 bg-white border border-gray-300 rounded-md py-2 flex items-center justify-center text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <AlignVerticalJustifyEnd />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Design adjustments */}
+                            <div className="mt-6 border-t pt-6">
+                                <h3 className="font-medium text-gray-800 mb-4">Design Adjustments</h3>
+                                <div className="space-y-5">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <label className="text-sm font-medium text-gray-700">Size</label>
+                                            <span id="size-value" className="text-xs text-gray-500">{size}%</span>
+                                        </div>
+                                        <input
+                                            id="size-slider"
+                                            type="range"
+                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                            min="20"
+                                            max="200"
+                                            value={size}
+                                            onChange={handleSizeChange}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <label className="text-sm font-medium text-gray-700">Rotation</label>
+                                            <span id="rotation-value" className="text-xs text-gray-500">{rotation}°</span>
+                                        </div>
+                                        <input
+                                            id="rotation-slider"
+                                            type="range"
+                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                            min="0"
+                                            max="360"
+                                            value={rotation}
+                                            onChange={handleRotationChange}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -405,46 +484,6 @@ const Right: React.FC<RightProps> = ({
                     </div>
                 </div>
             </div>
-
-            {activeTab === 'design111' && (
-                <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6">
-                    <h3 className="text-lg font-medium text-gray-800 mb-4">Design Adjustments</h3>
-
-                    <div className="space-y-5">
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="text-sm font-medium text-gray-700">Size</label>
-                                <span id="size-value" className="text-xs text-gray-500">{size}%</span>
-                            </div>
-                            <input
-                                id="size-slider"
-                                type="range"
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                min="20"
-                                max="200"
-                                value={size}
-                                onChange={handleSizeChange}
-                            />
-                        </div>
-
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="text-sm font-medium text-gray-700">Rotation</label>
-                                <span id="rotation-value" className="text-xs text-gray-500">{rotation}°</span>
-                            </div>
-                            <input
-                                id="rotation-slider"
-                                type="range"
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                min="0"
-                                max="360"
-                                value={rotation}
-                                onChange={handleRotationChange}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <div className="mt-6 bg-indigo-50 border border-indigo-100 rounded-lg p-4 flex items-start">
                 <i className="fa-solid fa-circle-info text-indigo-500 mt-0.5 mr-3"></i>
