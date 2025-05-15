@@ -26,6 +26,7 @@ function App() {
   }>>([]);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [isImageSelected, setIsImageSelected] = useState(false);
+  const [isFullFront, setIsFullFront] = useState(false);
 
   // Add the canvasRef
   const canvasRef = useRef<TShirtMockupRef>(null);
@@ -134,6 +135,7 @@ function App() {
     if (preset === 'center') {
       // Center position with normal size
       setDesignSize(100);
+      setIsFullFront(false);
       if (canvasRef.current) {
         canvasRef.current.setPosition(
           printableArea.left + printableArea.width / 2,
@@ -141,8 +143,9 @@ function App() {
         );
       }
     } else if (preset === 'pocket') {
-      // Pocket position (top right) with smaller size
-      setDesignSize(50);
+      // Pocket position (top left) with smaller size
+      setDesignSize(40);
+      setIsFullFront(false);
       if (canvasRef.current) {
         canvasRef.current.setPosition(
           printableArea.left + printableArea.width * 0.75,
@@ -150,38 +153,14 @@ function App() {
         );
       }
     } else if (preset === 'full-front') {
-      // For full-front, we'll make the image cover the entire printable area
-      if (canvasRef.current && canvasRef.current.getImageDimensions) {
-        const imageDimensions = canvasRef.current.getImageDimensions();
-
-        if (imageDimensions) {
-          const { width, height } = imageDimensions;
-
-          // Calculate the scale needed to completely cover the printable area
-          const widthRatio = printableArea.width / width;
-          const heightRatio = printableArea.height / height;
-
-          // Use the larger ratio to ensure the image covers the entire area
-          const coverRatio = Math.max(widthRatio, heightRatio);
-
-          // Set a size that will make the image cover the printable area
-          // We multiply by 100 because our designSize is a percentage
-          const newSize = coverRatio * 100 * 1.1; // Add 10% extra to ensure full coverage
-          setDesignSize(newSize);
-
-          // Position at the center of the printable area
-          canvasRef.current.setPosition(
-            printableArea.left + printableArea.width / 2,
-            printableArea.top + printableArea.height / 2
-          );
-        } else {
-          // Fallback if dimensions can't be determined
-          setDesignSize(250); // Use a very large size to ensure coverage
-          canvasRef.current.setPosition(
-            printableArea.left + printableArea.width / 2,
-            printableArea.top + printableArea.height / 2
-          );
-        }
+      // Full front - set flag to true and let DesignCanvas handle the scaling
+      setIsFullFront(true);
+      if (canvasRef.current) {
+        // Center the image in the printable area
+        canvasRef.current.setPosition(
+          printableArea.left + printableArea.width / 2,
+          printableArea.top + printableArea.height / 2
+        );
       }
     }
   };
@@ -210,6 +189,7 @@ function App() {
           isImageSelected={isImageSelected}
           onImageSelect={() => setIsImageSelected(true)}
           onImageDeselect={() => setIsImageSelected(false)}
+          isFullFront={isFullFront}
         />
         <Right
           onImageUpload={handleImageUpload}

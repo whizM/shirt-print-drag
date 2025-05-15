@@ -47,6 +47,7 @@ interface TShirtMockupProps {
   isImageSelected?: boolean;
   onImageSelect?: () => void;
   onImageDeselect?: () => void;
+  isFullFront?: boolean;
 }
 
 // Make sure the interface is exported
@@ -70,6 +71,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   isImageSelected,
   onImageSelect,
   onImageDeselect,
+  isFullFront = false,
 }, ref) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentView] = useState<'front'>('front');
@@ -196,6 +198,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
                 isImageSelected={isImageSelected}
                 onImageSelect={onImageSelect}
                 onImageDeselect={onImageDeselect}
+                isFullFront={isFullFront}
               />
             </div>
 

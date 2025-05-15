@@ -28,6 +28,7 @@ interface DesignCanvasProps {
     isImageSelected?: boolean;
     onImageSelect?: () => void;
     onImageDeselect?: () => void;
+    isFullFront?: boolean;
 }
 
 // Add ref type
@@ -49,7 +50,8 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     selectedTextId,
     isImageSelected,
     onImageSelect,
-    onImageDeselect
+    onImageDeselect,
+    isFullFront = false
 }, ref) => {
     const [image] = useImage(imageUrl);
     const [initialScale, setInitialScale] = useState(1);
@@ -62,7 +64,8 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
         scaleX: designSize / 100,
         scaleY: designSize / 100,
     });
-    console.log(transform);
+    console.log('designSize', designSize / 100);
+    console.log('scale', transform.scaleX, transform.scaleY);
     const imageRef = useRef<Konva.Image>(null);
     const transformerRef = useRef<Konva.Transformer>(null);
     const [isSelected, setIsSelected] = useState(false);
@@ -94,14 +97,33 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                 printableArea.width / image.width,
                 printableArea.height / image.height
             ) * 0.8;
+
+            // Store the initial scale for normal sizing
             setInitialScale(scale);
-            setTransform(prev => ({
-                ...prev,
-                width: image.width,
-                height: image.height,
-                scaleX: scale * (designSize / 100),
-                scaleY: scale * (designSize / 100),
-            }));
+
+            // If in Full Front mode, calculate the scale to cover the printable area
+            if (isFullFront) {
+                const widthRatio = printableArea.width / image.width;
+                const heightRatio = printableArea.height / image.height;
+                const coverRatio = Math.min(widthRatio, heightRatio);
+
+                setTransform(prev => ({
+                    ...prev,
+                    width: image.width,
+                    height: image.height,
+                    scaleX: coverRatio,
+                    scaleY: coverRatio,
+                }));
+            } else {
+                // Normal scaling based on designSize
+                setTransform(prev => ({
+                    ...prev,
+                    width: image.width,
+                    height: image.height,
+                    scaleX: scale * (designSize / 100),
+                    scaleY: scale * (designSize / 100),
+                }));
+            }
 
             if (imageRef.current && transformerRef.current) {
                 const layer = transformerRef.current.getLayer();
@@ -112,23 +134,33 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
             }
             setIsSelected(true);
         }
-    }, [image, printableArea, designSize]);
+    }, [image, printableArea, designSize, isFullFront]);
 
     useEffect(() => {
-        setTransform(prev => ({
-            ...prev,
-            rotation: designRotation,
-            scaleX: initialScale * (designSize / 100),
-            scaleY: initialScale * (designSize / 100),
-        }));
+        if (initialScale && image) {
+            // If in Full Front mode, calculate the scale directly to cover the printable area
+            if (isFullFront) {
+                const widthRatio = printableArea.width / image.width;
+                const heightRatio = printableArea.height / image.height;
+                const coverRatio = Math.min(widthRatio, heightRatio);
 
-        if (imageRef.current) {
-            imageRef.current.scaleX(initialScale * (designSize / 100));
-            imageRef.current.scaleY(initialScale * (designSize / 100));
-            imageRef.current.rotation(designRotation);
-            imageRef.current.getLayer()?.batchDraw();
+                setTransform(prev => ({
+                    ...prev,
+                    rotation: designRotation,
+                    scaleX: coverRatio,
+                    scaleY: coverRatio,
+                }));
+            } else {
+                // Normal scaling
+                setTransform(prev => ({
+                    ...prev,
+                    rotation: designRotation,
+                    scaleX: initialScale * (designSize / 100),
+                    scaleY: initialScale * (designSize / 100),
+                }));
+            }
         }
-    }, [designSize, designRotation, initialScale]);
+    }, [designSize, designRotation, initialScale, image, printableArea, isFullFront]);
 
     useEffect(() => {
         if (isSelected && imageRef.current && transformerRef.current) {
