@@ -4,6 +4,7 @@ import type { TShirtMockupRef } from './components/TShirtMockup'
 import './App.css'
 import Header from './components/Header'
 import Right from './components/Right'
+import { ToastContainer } from 'react-toastify';
 
 const PRINTABLE_AREAS = {
   front: {
@@ -257,6 +258,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white">
+      <ToastContainer />
       <Header />
       <div className="container mx-auto py-6 px-4 md:px-6 flex flex-col md:flex-row gap-8 w-screen justify-center">
         <div ref={canvasContainerRef} className="md:w-3/5 w-full">

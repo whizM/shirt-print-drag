@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
-import Notification from "./Notification";
 import { AlignHorizontalSpaceAround, AlignVerticalJustifyEnd, AlignVerticalJustifyStart, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd, Trash2, Upload, X } from "lucide-react";
+import { toast } from "react-toastify";
 
 interface RightProps {
     onImageUpload: (file: File) => void;
@@ -48,7 +48,6 @@ const Right: React.FC<RightProps> = ({
     setSelectedTextId
 }) => {
     const [activeTab, setActiveTab] = useState('design');
-    const [notification, setNotification] = useState<{ message: string; type: 'error' | 'success' | 'warning' } | null>(null);
     const [newText, setNewText] = useState('');
     const [fontSize, setFontSize] = useState(24);
     const [textColor, setTextColor] = useState('#000000');
@@ -93,26 +92,17 @@ const Right: React.FC<RightProps> = ({
 
     const handleFile = (file: File) => {
         if (file.size > MAX_FILE_SIZE) {
-            setNotification({
-                message: 'File size exceeds 10MB limit',
-                type: 'error'
-            });
+            toast.error('File size exceeds 10MB limit');
             return;
         }
 
         if (!file.type.startsWith('image/')) {
-            setNotification({
-                message: 'Only image files are allowed',
-                type: 'error'
-            });
+            toast.error('Only image files are allowed');
             return;
         }
 
         onImageUpload(file);
-        setNotification({
-            message: 'Image uploaded successfully',
-            type: 'success'
-        });
+        toast.success('Image uploaded successfully');
     };
 
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -173,14 +163,6 @@ const Right: React.FC<RightProps> = ({
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 h-full">
-            {notification && (
-                <Notification
-                    message={notification.message}
-                    type={notification.type}
-                    onClose={() => setNotification(null)}
-                />
-            )}
-
             <div className="mb-4">
                 <div className="flex border-b border-gray-200">
                     <button
@@ -249,7 +231,7 @@ const Right: React.FC<RightProps> = ({
                                                 </div>
                                             </button>
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ vertical: 'top' })}
+                                                onClick={() => onAlignmentChange && onAlignmentChange({ vertical: 'top', horizontal: 'center' })}
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
                                                 title="Top Center"
                                             >
@@ -296,7 +278,7 @@ const Right: React.FC<RightProps> = ({
                                                 </div>
                                             </button>
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ vertical: 'bottom' })}
+                                                onClick={() => onAlignmentChange && onAlignmentChange({ vertical: 'bottom', horizontal: 'center' })}
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
                                                 title="Bottom Center"
                                             >
@@ -315,18 +297,18 @@ const Right: React.FC<RightProps> = ({
                                     </div>
 
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Position Presets</label>
-                                    <div className="grid grid-cols-3 gap-2  text-gray-700">
-                                        <button
-                                            onClick={() => onPositionPreset && onPositionPreset('pocket')}
-                                            className="p-2 border border-gray-300 rounded hover:bg-gray-100 text-xs font-medium"
-                                        >
-                                            Pocket
-                                        </button>
+                                    <div className="grid grid-cols-2 gap-2  text-gray-700">
                                         <button
                                             onClick={() => onPositionPreset && onPositionPreset('full-front')}
                                             className="p-2 border border-gray-300 rounded hover:bg-gray-100 text-xs font-medium"
                                         >
                                             Full Front
+                                        </button>
+                                        <button
+                                            onClick={() => onPositionPreset && onPositionPreset('pocket')}
+                                            className="p-2 border border-gray-300 rounded hover:bg-gray-100 text-xs font-medium"
+                                        >
+                                            Pocket
                                         </button>
                                     </div>
 
