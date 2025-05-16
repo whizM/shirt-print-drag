@@ -68,10 +68,19 @@ function App() {
     const img = createImage();
 
     img.onload = () => {
+      // Get the current container width
+      const containerWidth = canvasRef.current?.getContainerWidth() || 500;
+      const centerOffset = (containerWidth - 500) / 2;
+
+      // Calculate the adjusted printable area
+      const adjustedPrintableArea = {
+        ...PRINTABLE_AREAS.front,
+        left: PRINTABLE_AREAS.front.left + centerOffset
+      };
+
       // Calculate the ratio to fit within printable area
-      const printableArea = PRINTABLE_AREAS.front;
-      const widthRatio = printableArea.width / img.width;
-      const heightRatio = printableArea.height / img.height;
+      const widthRatio = adjustedPrintableArea.width / img.width;
+      const heightRatio = adjustedPrintableArea.height / img.height;
 
       // Use the smaller ratio to ensure the image fits inside the printable area
       const fitRatio = Math.min(widthRatio, heightRatio);
@@ -85,8 +94,8 @@ function App() {
         url,
         size: initialSize,
         rotation: 0,
-        x: printableArea.left + printableArea.width / 2,
-        y: printableArea.top + printableArea.height / 2
+        x: adjustedPrintableArea.left + adjustedPrintableArea.width / 2,
+        y: adjustedPrintableArea.top + adjustedPrintableArea.height / 2
       };
 
       setImages(prev => [...prev, newImage]);
@@ -160,30 +169,34 @@ function App() {
   const handleAlignmentChange = (alignment: { horizontal?: 'left' | 'center' | 'right', vertical?: 'top' | 'middle' | 'bottom' }) => {
     if (!selectedImageId) return;
 
-    // Find the selected image
     const selectedImage = images.find(img => img.id === selectedImageId);
     if (!selectedImage) return;
 
-    // Calculate new position based on alignment
     const printableArea = PRINTABLE_AREAS.front;
-
-    // Get current image dimensions
     const img = createImage();
     img.src = selectedImage.url;
+
+    // Get the container width from the canvas ref
+    const containerWidth = canvasRef.current?.getContainerWidth() || 500;
+    const centerOffset = (containerWidth - 500) / 2;
+    const adjustedPrintableArea = {
+      ...printableArea,
+      left: printableArea.left + centerOffset
+    };
 
     let newX = selectedImage.x;
     let newY = selectedImage.y;
 
-    // Horizontal alignment
+    // Horizontal alignment with adjusted printable area
     if (alignment.horizontal === 'left') {
-      newX = printableArea.left + (img.width * selectedImage.size / 100) / 2;
+      newX = adjustedPrintableArea.left + (img.width * selectedImage.size / 100) / 2;
     } else if (alignment.horizontal === 'center') {
-      newX = printableArea.left + printableArea.width / 2;
+      newX = adjustedPrintableArea.left + adjustedPrintableArea.width / 2;
     } else if (alignment.horizontal === 'right') {
-      newX = printableArea.left + printableArea.width - (img.width * selectedImage.size / 100) / 2;
+      newX = adjustedPrintableArea.left + adjustedPrintableArea.width - (img.width * selectedImage.size / 100) / 2;
     }
 
-    // Vertical alignment
+    // Vertical alignment remains the same
     if (alignment.vertical === 'top') {
       newY = printableArea.top + (img.height * selectedImage.size / 100) / 2;
     } else if (alignment.vertical === 'middle') {
@@ -192,42 +205,44 @@ function App() {
       newY = printableArea.top + printableArea.height - (img.height * selectedImage.size / 100) / 2;
     }
 
-    // Update the image position
     handleImageUpdate(selectedImageId, { x: newX, y: newY });
   };
 
   const handlePositionPreset = (preset: 'center' | 'pocket' | 'full-front') => {
     if (!selectedImageId) return;
 
-    const printableArea = PRINTABLE_AREAS.front;
+    // Get the container width and calculate adjusted printable area
+    const containerWidth = canvasRef.current?.getContainerWidth() || 500;
+    const centerOffset = (containerWidth - 500) / 2;
+    const adjustedPrintableArea = {
+      ...PRINTABLE_AREAS.front,
+      left: PRINTABLE_AREAS.front.left + centerOffset
+    };
 
     if (preset === 'center') {
       handleImageUpdate(selectedImageId, {
-        x: printableArea.left + printableArea.width / 2,
-        y: printableArea.top + printableArea.height / 2
+        x: adjustedPrintableArea.left + adjustedPrintableArea.width / 2,
+        y: adjustedPrintableArea.top + adjustedPrintableArea.height / 2
       });
     } else if (preset === 'pocket') {
-      // For full-front, we need to resize the image to cover the printable area
       const selectedImage = images.find(img => img.id === selectedImageId);
       if (!selectedImage) return;
 
       const img = createImage();
       img.src = selectedImage.url;
 
-      // Calculate the ratio to cover the printable area
-      const widthRatio = printableArea.width / img.width;
-      const heightRatio = printableArea.height / img.height;
+      // Calculate the ratio for pocket size (1/3 of original)
+      const widthRatio = adjustedPrintableArea.width / img.width;
+      const heightRatio = adjustedPrintableArea.height / img.height;
       const coverRatio = Math.min(widthRatio, heightRatio);
+      const newSize = coverRatio * 100 / 3; // Make it 1/3 of the full size
 
-      // Convert to percentage for size
-      const newSize = coverRatio * 100;
       handleImageUpdate(selectedImageId, {
-        x: printableArea.left + printableArea.width * 0.75,
-        y: printableArea.top + printableArea.height * 0.25,
-        size: newSize / 3
+        x: adjustedPrintableArea.left + adjustedPrintableArea.width * 0.75,
+        y: adjustedPrintableArea.top + adjustedPrintableArea.height * 0.25,
+        size: newSize
       });
     } else if (preset === 'full-front') {
-      // For full-front, we need to resize the image to cover the printable area
       const selectedImage = images.find(img => img.id === selectedImageId);
       if (!selectedImage) return;
 
@@ -235,17 +250,14 @@ function App() {
       img.src = selectedImage.url;
 
       // Calculate the ratio to cover the printable area
-      const widthRatio = printableArea.width / img.width;
-      const heightRatio = printableArea.height / img.height;
+      const widthRatio = adjustedPrintableArea.width / img.width;
+      const heightRatio = adjustedPrintableArea.height / img.height;
       const coverRatio = Math.min(widthRatio, heightRatio);
-
-      // Convert to percentage for size
       const newSize = coverRatio * 100;
 
-      // Update the image
       handleImageUpdate(selectedImageId, {
-        x: printableArea.left + printableArea.width / 2,
-        y: printableArea.top + printableArea.height / 2,
+        x: adjustedPrintableArea.left + adjustedPrintableArea.width / 2,
+        y: adjustedPrintableArea.top + adjustedPrintableArea.height / 2,
         size: newSize
       });
     }
@@ -260,7 +272,7 @@ function App() {
     <div className="min-h-screen bg-white">
       <ToastContainer />
       <Header />
-      <div className="container mx-auto py-6 px-4 md:px-6 flex flex-col md:flex-row gap-8 w-screen justify-center">
+      <div className="lg:w-11/12 md:w-full mx-auto py-6 px-4 md:px-6 flex flex-col md:flex-row gap-8 w-screen justify-center">
         <div ref={canvasContainerRef} className="md:w-3/5 w-full">
           <TShirtMockup
             ref={canvasRef}

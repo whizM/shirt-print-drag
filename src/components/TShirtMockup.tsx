@@ -1,4 +1,4 @@
-import { useState, useImperativeHandle, forwardRef, useRef } from 'react';
+import { useState, useImperativeHandle, forwardRef, useRef, useEffect } from 'react';
 import DesignCanvas from './DesignCanvas';
 import type { DesignCanvasRef } from './DesignCanvas';
 import { RefreshCw, ZoomIn, ZoomOut, ChevronDown, RotateCcw, RotateCw } from 'lucide-react';
@@ -60,6 +60,7 @@ export interface TShirtMockupRef {
   setPosition: (x: number, y: number) => void;
   getImageDimensions: () => { width: number; height: number; scaleX: number; scaleY: number } | null;
   getPosition: () => { x: number; y: number } | null;
+  getContainerWidth: () => number;
 }
 
 // Update to use forwardRef
@@ -81,6 +82,24 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   const [currentColor, setCurrentColor] = useState<'white' | 'black'>('white');
   const [isShirtSelectorOpen, setIsShirtSelectorOpen] = useState(false);
   const canvasRef = useRef<DesignCanvasRef>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(500);
+
+  // Function to update width
+  const updateWidth = () => {
+    if (containerRef.current) {
+      setContainerWidth(containerRef.current.offsetWidth);
+    }
+  };
+
+  useEffect(() => {
+    // Get initial width
+    updateWidth();
+
+    // Add resize listener
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -100,7 +119,8 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
         return canvasRef.current.getPosition();
       }
       return null;
-    }
+    },
+    getContainerWidth: () => containerWidth
   }));
 
   const handleZoomIn = () => {
@@ -126,10 +146,20 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
     }
   };
 
+  const calculatePrintableArea = (containerWidth: number) => {
+    const originalArea = printableArea;
+    const centerOffset = (containerWidth - 500) / 2;
+
+    return {
+      ...originalArea,
+      left: originalArea.left + centerOffset
+    };
+  };
+
   return (
     <div className="bg-gray-50 rounded-lg p-4 h-[500px] md:h-[600px] flex flex-col">
       {/* Preview controls */}
-      <div className="flex justify-between mb-4">
+      <div className="flex justify-between mb-4 flex-wrap gap-3">
         <div className="flex space-x-2">
           {/* Shirt selector dropdown */}
           <div className="relative">
@@ -137,7 +167,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               onClick={() => setIsShirtSelectorOpen(!isShirtSelectorOpen)}
               className="bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm flex items-center gap-2"
             >
-              <span>Select Style</span>
+              <span className='leading-6'>Select Style</span>
               <ChevronDown className="w-4 h-4" />
             </button>
 
@@ -206,11 +236,12 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
         onClick={handleBackgroundClick}
       >
         <div
-          className="relative w-[500px] h-[500px] transition-transform duration-200"
+          className="relative max-w-[500px] mx-0 my-auto w-full h-[500px] transition-transform duration-200"
           style={{
             transform: `scale(${zoomLevel})`,
             transformOrigin: 'center center'
           }}
+          ref={containerRef}
         >
           {/* T-shirt image */}
           <img
@@ -224,8 +255,9 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
 
           <DesignCanvas
             ref={canvasRef}
+            containerWidth={containerWidth}
             images={images}
-            printableArea={printableArea}
+            printableArea={calculatePrintableArea(containerWidth)}
             selectedImageId={selectedImageId}
             onImageSelect={onImageSelect}
             onImageUpdate={onImageUpdate}
@@ -240,7 +272,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               className="absolute border-2 border-dashed border-blue-400 bg-blue-50 bg-opacity-10 pointer-events-none"
               style={{
                 top: `${printableArea.top}px`,
-                left: `${printableArea.left}px`,
+                left: `${calculatePrintableArea(containerWidth).left}px`,
                 width: `${printableArea.width}px`,
                 height: `${printableArea.height}px`,
               }}

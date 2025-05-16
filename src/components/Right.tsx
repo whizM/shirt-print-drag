@@ -445,7 +445,7 @@ const Right: React.FC<RightProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={() => onTextDelete && selectedTextId && onTextDelete(selectedTextId)}
-                                                className="flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                                className="flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>

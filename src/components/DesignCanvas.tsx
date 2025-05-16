@@ -32,6 +32,7 @@ interface DesignCanvasProps {
     }>;
     onTextSelect?: (id: string) => void;
     selectedTextId?: string | null;
+    containerWidth: number;
     onTextUpdate?: (id: string, updates: Partial<{ text: string; fontSize: number; color: string; x: number; y: number; rotation: number }>) => void;
 }
 
@@ -40,6 +41,7 @@ export interface DesignCanvasRef {
     setPosition: (x: number, y: number) => void;
     getImageDimensions: () => { width: number; height: number; scaleX: number; scaleY: number } | null;
     getPosition: () => { x: number; y: number } | null;
+    getContainerWidth: () => number;
 }
 
 // Update to use forwardRef
@@ -52,7 +54,8 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     texts,
     onTextSelect,
     selectedTextId,
-    onTextUpdate
+    onTextUpdate,
+    containerWidth
 }, ref) => {
     const stageRef = useRef<Konva.Stage>(null);
     const imageRefs = useRef<{ [key: string]: Konva.Image | null }>({});
@@ -113,7 +116,8 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                 }
             }
             return null;
-        }
+        },
+        getContainerWidth: () => containerWidth
     }));
 
     const handleTextDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
@@ -140,19 +144,19 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
             textNode.scaleY(1);
         }
     };
-
+    console.log(printableArea);
     return (
         <Stage
             ref={stageRef}
-            width={500}
+            width={containerWidth}
             height={500}
             style={{
                 position: 'absolute',
-                top: '0',
-                left: '0',
+                top: '50%',
+                left: '50%',
                 width: '100%',
                 height: '100%',
-                transform: 'none',
+                transform: 'translate(-50%, -50%)',
             }}
         >
             <Layer>
