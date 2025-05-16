@@ -144,7 +144,7 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
             textNode.scaleY(1);
         }
     };
-    console.log(printableArea);
+
     return (
         <Stage
             ref={stageRef}
