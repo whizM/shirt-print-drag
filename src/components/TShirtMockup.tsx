@@ -63,13 +63,26 @@ export interface TShirtMockupRef {
   getContainerWidth: () => number;
 }
 
-// Add this constant at the top
-const ORIGINAL_CANVAS_WIDTH = 500;
-// const ORIGINAL_CANVAS_HEIGHT = 500;
+// Add this function at the top of the file
+const calculateScaledDimensions = (containerWidth: number) => {
+  const baseWidth = 500;
+  const scale = containerWidth / baseWidth;
+
+  return {
+    scale,
+    width: containerWidth,
+    height: 500 * scale,
+    printableArea: {
+      top: 120 * scale,
+      left: 150 * scale,
+      width: 200 * scale,
+      height: 220 * scale,
+    }
+  };
+};
 
 // Update to use forwardRef
 const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
-  printableArea,
   showPrintableArea,
   images,
   selectedImageId,
@@ -88,6 +101,8 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   const canvasRef = useRef<DesignCanvasRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(500);
+
+  const scaledDimensions = calculateScaledDimensions(containerWidth);
 
   // Function to update width
   const updateWidth = () => {
@@ -150,20 +165,14 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
     }
   };
 
+  // Update the printable area calculation
   const calculatePrintableArea = (containerWidth: number) => {
-    const scale = containerWidth / ORIGINAL_CANVAS_WIDTH;
-    const originalArea = printableArea;
-
-    return {
-      top: originalArea.top * scale,
-      left: originalArea.left * scale,
-      width: originalArea.width * scale,
-      height: originalArea.height * scale
-    };
+    const { printableArea: scaledArea } = calculateScaledDimensions(containerWidth);
+    return scaledArea;
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 h-[500px] md:h-[600px] flex flex-col">
+    <div className="bg-gray-50 rounded-lg p-4 h-auto flex flex-col">
       {/* Preview controls */}
       <div className="flex justify-between mb-4 flex-wrap gap-3">
         <div className="flex space-x-2">
@@ -240,12 +249,17 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
       <div
         className="flex-grow flex items-center justify-center relative bg-white rounded-lg border border-gray-200 overflow-hidden"
         onClick={handleBackgroundClick}
+        style={{
+          height: scaledDimensions.height,
+          maxHeight: '600px'
+        }}
       >
         <div
-          className="relative w-full aspect-square max-w-[500px] mx-auto"
+          className="relative w-full h-full transition-transform duration-200"
           style={{
             transform: `scale(${zoomLevel})`,
-            transformOrigin: 'center center'
+            transformOrigin: 'center center',
+            maxWidth: scaledDimensions.width,
           }}
           ref={containerRef}
         >
@@ -261,7 +275,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
 
           <DesignCanvas
             ref={canvasRef}
-            containerWidth={containerWidth}
+            containerWidth={scaledDimensions.width}
             images={images}
             printableArea={calculatePrintableArea(containerWidth)}
             selectedImageId={selectedImageId}

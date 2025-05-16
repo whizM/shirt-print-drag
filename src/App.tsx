@@ -6,13 +6,18 @@ import Header from './components/Header'
 import Right from './components/Right'
 import { ToastContainer } from 'react-toastify';
 
-const PRINTABLE_AREAS = {
-  front: {
-    top: 120,
-    left: 150,
-    width: 200,
-    height: 220,
-  }
+const getScaledPrintableArea = (containerWidth: number) => {
+  const baseWidth = 500;
+  const scale = containerWidth / baseWidth;
+
+  return {
+    front: {
+      top: 120 * scale,
+      left: 150 * scale,
+      width: 200 * scale,
+      height: 220 * scale,
+    }
+  };
 };
 
 function App() {
@@ -68,25 +73,13 @@ function App() {
     const img = createImage();
 
     img.onload = () => {
-      // Get the current container width
       const containerWidth = canvasRef.current?.getContainerWidth() || 500;
-      const centerOffset = (containerWidth - 500) / 2;
-
-      // Calculate the adjusted printable area
-      const adjustedPrintableArea = {
-        ...PRINTABLE_AREAS.front,
-        left: PRINTABLE_AREAS.front.left + centerOffset
-      };
+      const printableArea = getScaledPrintableArea(containerWidth).front;
 
       // Calculate the ratio to fit within printable area
-      const widthRatio = adjustedPrintableArea.width / img.width;
-      const heightRatio = adjustedPrintableArea.height / img.height;
-
-      // Use the smaller ratio to ensure the image fits inside the printable area
+      const widthRatio = printableArea.width / img.width;
+      const heightRatio = printableArea.height / img.height;
       const fitRatio = Math.min(widthRatio, heightRatio);
-
-      // If image is smaller than printable area, keep original size (100%)
-      // If larger, scale it down to fit
       const initialSize = fitRatio < 1 ? fitRatio * 100 : 100;
 
       const newImage = {
@@ -94,8 +87,8 @@ function App() {
         url,
         size: initialSize,
         rotation: 0,
-        x: adjustedPrintableArea.left + adjustedPrintableArea.width / 2,
-        y: adjustedPrintableArea.top + adjustedPrintableArea.height / 2
+        x: printableArea.left + printableArea.width / 2,
+        y: printableArea.top + printableArea.height / 2
       };
 
       setImages(prev => [...prev, newImage]);
@@ -124,18 +117,24 @@ function App() {
   };
 
   const handleTextAdd = (text: string, fontSize: number, color: string) => {
+    // Get the current container width for proper scaling
+    const containerWidth = canvasRef.current?.getContainerWidth() || 500;
+    const printableArea = getScaledPrintableArea(containerWidth).front;
+
     const newText = {
       id: Date.now().toString() + Math.random(),
       text,
       fontSize,
       color,
-      x: PRINTABLE_AREAS.front.left + PRINTABLE_AREAS.front.width / 2,
-      y: PRINTABLE_AREAS.front.top + PRINTABLE_AREAS.front.height / 2,
+      // Use the current container's scaled printable area for positioning
+      x: printableArea.left + printableArea.width / 2,
+      y: printableArea.top + printableArea.height / 2,
       rotation: 0
     };
+
     setDesignTexts(prev => [...prev, newText]);
     setSelectedTextId(newText.id);
-    setSelectedImageId(null); // Deselect image when adding text
+    setSelectedImageId(null);
   };
 
   const handleTextSelect = (id: string) => {
@@ -172,28 +171,21 @@ function App() {
     const selectedImage = images.find(img => img.id === selectedImageId);
     if (!selectedImage) return;
 
-    const printableArea = PRINTABLE_AREAS.front;
+    const containerWidth = canvasRef.current?.getContainerWidth() || 500;
+    const printableArea = getScaledPrintableArea(containerWidth).front;
     const img = createImage();
     img.src = selectedImage.url;
-
-    // Get the container width from the canvas ref
-    const containerWidth = canvasRef.current?.getContainerWidth() || 500;
-    const centerOffset = (containerWidth - 500) / 2;
-    const adjustedPrintableArea = {
-      ...printableArea,
-      left: printableArea.left + centerOffset
-    };
 
     let newX = selectedImage.x;
     let newY = selectedImage.y;
 
     // Horizontal alignment with adjusted printable area
     if (alignment.horizontal === 'left') {
-      newX = adjustedPrintableArea.left + (img.width * selectedImage.size / 100) / 2;
+      newX = printableArea.left + (img.width * selectedImage.size / 100) / 2;
     } else if (alignment.horizontal === 'center') {
-      newX = adjustedPrintableArea.left + adjustedPrintableArea.width / 2;
+      newX = printableArea.left + printableArea.width / 2;
     } else if (alignment.horizontal === 'right') {
-      newX = adjustedPrintableArea.left + adjustedPrintableArea.width - (img.width * selectedImage.size / 100) / 2;
+      newX = printableArea.left + printableArea.width - (img.width * selectedImage.size / 100) / 2;
     }
 
     // Vertical alignment remains the same
@@ -211,18 +203,13 @@ function App() {
   const handlePositionPreset = (preset: 'center' | 'pocket' | 'full-front') => {
     if (!selectedImageId) return;
 
-    // Get the container width and calculate adjusted printable area
     const containerWidth = canvasRef.current?.getContainerWidth() || 500;
-    const centerOffset = (containerWidth - 500) / 2;
-    const adjustedPrintableArea = {
-      ...PRINTABLE_AREAS.front,
-      left: PRINTABLE_AREAS.front.left + centerOffset
-    };
+    const printableArea = getScaledPrintableArea(containerWidth).front;
 
     if (preset === 'center') {
       handleImageUpdate(selectedImageId, {
-        x: adjustedPrintableArea.left + adjustedPrintableArea.width / 2,
-        y: adjustedPrintableArea.top + adjustedPrintableArea.height / 2
+        x: printableArea.left + printableArea.width / 2,
+        y: printableArea.top + printableArea.height / 2
       });
     } else if (preset === 'pocket') {
       const selectedImage = images.find(img => img.id === selectedImageId);
@@ -232,14 +219,14 @@ function App() {
       img.src = selectedImage.url;
 
       // Calculate the ratio for pocket size (1/3 of original)
-      const widthRatio = adjustedPrintableArea.width / img.width;
-      const heightRatio = adjustedPrintableArea.height / img.height;
+      const widthRatio = printableArea.width / img.width;
+      const heightRatio = printableArea.height / img.height;
       const coverRatio = Math.min(widthRatio, heightRatio);
       const newSize = coverRatio * 100 / 3; // Make it 1/3 of the full size
 
       handleImageUpdate(selectedImageId, {
-        x: adjustedPrintableArea.left + adjustedPrintableArea.width * 0.75,
-        y: adjustedPrintableArea.top + adjustedPrintableArea.height * 0.25,
+        x: printableArea.left + printableArea.width * 0.75,
+        y: printableArea.top + printableArea.height * 0.25,
         size: newSize
       });
     } else if (preset === 'full-front') {
@@ -250,14 +237,14 @@ function App() {
       img.src = selectedImage.url;
 
       // Calculate the ratio to cover the printable area
-      const widthRatio = adjustedPrintableArea.width / img.width;
-      const heightRatio = adjustedPrintableArea.height / img.height;
+      const widthRatio = printableArea.width / img.width;
+      const heightRatio = printableArea.height / img.height;
       const coverRatio = Math.min(widthRatio, heightRatio);
       const newSize = coverRatio * 100;
 
       handleImageUpdate(selectedImageId, {
-        x: adjustedPrintableArea.left + adjustedPrintableArea.width / 2,
-        y: adjustedPrintableArea.top + adjustedPrintableArea.height / 2,
+        x: printableArea.left + printableArea.width / 2,
+        y: printableArea.top + printableArea.height / 2,
         size: newSize
       });
     }
@@ -276,7 +263,7 @@ function App() {
         <div ref={canvasContainerRef} className="md:w-3/5 w-full">
           <TShirtMockup
             ref={canvasRef}
-            printableArea={PRINTABLE_AREAS.front}
+            printableArea={getScaledPrintableArea(500).front}
             showPrintableArea={true}
             images={images}
             selectedImageId={selectedImageId}
