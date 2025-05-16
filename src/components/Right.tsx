@@ -244,7 +244,7 @@ const Right: React.FC<RightProps> = ({
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
                                                 title="Top Left"
                                             >
-                                                <div className="transform -rotate-45">
+                                                <div className="transform rotate-45">
                                                     <AlignHorizontalJustifyStart className="w-4 h-4" />
                                                 </div>
                                             </button>
@@ -260,12 +260,12 @@ const Right: React.FC<RightProps> = ({
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
                                                 title="Top Right"
                                             >
-                                                <div className="transform rotate-45">
+                                                <div className="transform -rotate-45">
                                                     <AlignHorizontalJustifyEnd className="w-4 h-4" />
                                                 </div>
                                             </button>
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'left' })}
+                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'left', vertical: 'middle' })}
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
                                                 title="Middle Left"
                                             >
@@ -279,7 +279,7 @@ const Right: React.FC<RightProps> = ({
                                                 <AlignHorizontalSpaceAround className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'right' })}
+                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'right', vertical: 'middle' })}
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
                                                 title="Middle Right"
                                             >
@@ -290,7 +290,7 @@ const Right: React.FC<RightProps> = ({
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
                                                 title="Bottom Left"
                                             >
-                                                <div className="transform rotate-45">
+                                                <div className="transform -rotate-45">
                                                     <AlignHorizontalJustifyStart className="w-4 h-4" />
                                                 </div>
                                             </button>
@@ -306,7 +306,7 @@ const Right: React.FC<RightProps> = ({
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
                                                 title="Bottom Right"
                                             >
-                                                <div className="transform -rotate-45">
+                                                <div className="transform rotate-45">
                                                     <AlignHorizontalJustifyEnd className="w-4 h-4" />
                                                 </div>
                                             </button>
