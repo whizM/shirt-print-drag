@@ -264,6 +264,7 @@ const Right: React.FC<RightProps> = ({
                                                     <AlignHorizontalJustifyEnd className="w-4 h-4" />
                                                 </div>
                                             </button>
+
                                             <button
                                                 onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'left', vertical: 'middle' })}
                                                 className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
