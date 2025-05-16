@@ -65,7 +65,7 @@ export interface TShirtMockupRef {
 
 // Add this constant at the top
 const ORIGINAL_CANVAS_WIDTH = 500;
-const ORIGINAL_CANVAS_HEIGHT = 500;
+// const ORIGINAL_CANVAS_HEIGHT = 500;
 
 // Update to use forwardRef
 const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
