@@ -316,12 +316,6 @@ const Right: React.FC<RightProps> = ({
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Position Presets</label>
                                     <div className="grid grid-cols-3 gap-2  text-gray-700">
                                         <button
-                                            onClick={() => onPositionPreset && onPositionPreset('center')}
-                                            className="p-2 border border-gray-300 rounded hover:bg-gray-100 text-xs font-medium"
-                                        >
-                                            Center
-                                        </button>
-                                        <button
                                             onClick={() => onPositionPreset && onPositionPreset('pocket')}
                                             className="p-2 border border-gray-300 rounded hover:bg-gray-100 text-xs font-medium"
                                         >
