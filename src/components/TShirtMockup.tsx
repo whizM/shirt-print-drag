@@ -63,6 +63,10 @@ export interface TShirtMockupRef {
   getContainerWidth: () => number;
 }
 
+// Add this constant at the top
+const ORIGINAL_CANVAS_WIDTH = 500;
+const ORIGINAL_CANVAS_HEIGHT = 500;
+
 // Update to use forwardRef
 const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   printableArea,
@@ -147,12 +151,14 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   };
 
   const calculatePrintableArea = (containerWidth: number) => {
+    const scale = containerWidth / ORIGINAL_CANVAS_WIDTH;
     const originalArea = printableArea;
-    const centerOffset = (containerWidth - 500) / 2;
 
     return {
-      ...originalArea,
-      left: originalArea.left + centerOffset
+      top: originalArea.top * scale,
+      left: originalArea.left * scale,
+      width: originalArea.width * scale,
+      height: originalArea.height * scale
     };
   };
 
@@ -236,7 +242,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
         onClick={handleBackgroundClick}
       >
         <div
-          className="relative max-w-[500px] mx-0 my-auto w-full h-[500px] transition-transform duration-200"
+          className="relative w-full aspect-square max-w-[500px] mx-auto"
           style={{
             transform: `scale(${zoomLevel})`,
             transformOrigin: 'center center'
@@ -271,10 +277,10 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
             <div
               className="absolute border-2 border-dashed border-blue-400 bg-blue-50 bg-opacity-10 pointer-events-none"
               style={{
-                top: `${printableArea.top}px`,
+                top: `${calculatePrintableArea(containerWidth).top}px`,
                 left: `${calculatePrintableArea(containerWidth).left}px`,
-                width: `${printableArea.width}px`,
-                height: `${printableArea.height}px`,
+                width: `${calculatePrintableArea(containerWidth).width}px`,
+                height: `${calculatePrintableArea(containerWidth).height}px`,
               }}
             ></div>
           )}
