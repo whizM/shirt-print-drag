@@ -206,9 +206,24 @@ function App() {
         y: printableArea.top + printableArea.height / 2
       });
     } else if (preset === 'pocket') {
+      // For full-front, we need to resize the image to cover the printable area
+      const selectedImage = images.find(img => img.id === selectedImageId);
+      if (!selectedImage) return;
+
+      const img = createImage();
+      img.src = selectedImage.url;
+
+      // Calculate the ratio to cover the printable area
+      const widthRatio = printableArea.width / img.width;
+      const heightRatio = printableArea.height / img.height;
+      const coverRatio = Math.min(widthRatio, heightRatio);
+
+      // Convert to percentage for size
+      const newSize = coverRatio * 100;
       handleImageUpdate(selectedImageId, {
-        x: printableArea.left + printableArea.width * 0.25,
-        y: printableArea.top + printableArea.height * 0.25
+        x: printableArea.left + printableArea.width * 0.75,
+        y: printableArea.top + printableArea.height * 0.25,
+        size: newSize / 3
       });
     } else if (preset === 'full-front') {
       // For full-front, we need to resize the image to cover the printable area
@@ -235,6 +250,11 @@ function App() {
     }
   };
 
+  const handleDeselect = () => {
+    setSelectedImageId(null);
+    setSelectedTextId(null);
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -252,6 +272,7 @@ function App() {
             onTextSelect={handleTextSelect}
             selectedTextId={selectedTextId}
             onTextUpdate={handleTextPositionUpdate}
+            onDeselect={handleDeselect}
           />
         </div>
         <div ref={rightPanelRef} className="md:w-2/5 w-full">
@@ -268,6 +289,7 @@ function App() {
             selectedImage={images.find(img => img.id === selectedImageId) || null}
             onImageUpdate={handleImageUpdate}
             onImageDelete={(id) => handleImageDelete(id)}
+            setSelectedTextId={setSelectedTextId}
           />
         </div>
       </div>

@@ -52,6 +52,7 @@ interface TShirtMockupProps {
   onTextSelect?: (id: string) => void;
   selectedTextId?: string | null;
   onTextUpdate?: (id: string, updates: Partial<{ x: number; y: number; fontSize: number; rotation: number }>) => void;
+  onDeselect?: () => void;
 }
 
 // Make sure the interface is exported
@@ -73,6 +74,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   onTextSelect,
   selectedTextId,
   onTextUpdate,
+  onDeselect,
 }, ref) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
@@ -116,6 +118,12 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
 
   const handleViewChange = (view: 'front' | 'back') => {
     setCurrentView(view);
+  };
+
+  const handleBackgroundClick = (e: React.MouseEvent) => {
+    if (e.currentTarget === e.target && onDeselect) {
+      onDeselect();
+    }
   };
 
   return (
@@ -193,7 +201,10 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
       </div>
 
       {/* Product preview */}
-      <div className="flex-grow flex items-center justify-center relative bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div
+        className="flex-grow flex items-center justify-center relative bg-white rounded-lg border border-gray-200 overflow-hidden"
+        onClick={handleBackgroundClick}
+      >
         <div
           className="relative w-[500px] h-[500px] transition-transform duration-200"
           style={{

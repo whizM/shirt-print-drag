@@ -1,5 +1,5 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { Stage, Layer, Transformer, Rect, Text } from 'react-konva';
+import { Stage, Layer, Transformer, Rect, Text, Group } from 'react-konva';
 import Konva from 'konva';
 import ImageLayer from './ImageLayer';
 
@@ -156,11 +156,15 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
             }}
         >
             <Layer>
+                {/* Render faded versions of images first */}
                 {images.map(image => (
                     <ImageLayer
-                        key={image.id}
+                        key={`faded-${image.id}`}
                         ref={(node) => {
-                            imageRefs.current[image.id] = node;
+                            // Don't store ref for faded version
+                            if (selectedImageId === image.id) {
+                                imageRefs.current[image.id] = node;
+                            }
                         }}
                         imageUrl={image.url}
                         x={image.x}
@@ -170,8 +174,38 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                         isSelected={selectedImageId === image.id}
                         onSelect={() => onImageSelect(image.id)}
                         onChange={(newAttrs) => onImageUpdate(image.id, newAttrs)}
+                        opacity={0.3}
                     />
                 ))}
+
+                {/* Clipped version on top */}
+                <Group
+                    clipFunc={(ctx) => {
+                        ctx.beginPath();
+                        ctx.rect(
+                            printableArea.left,
+                            printableArea.top,
+                            printableArea.width,
+                            printableArea.height
+                        );
+                        ctx.closePath();
+                    }}
+                >
+                    {images.map(image => (
+                        <ImageLayer
+                            key={`clipped-${image.id}`}
+                            imageUrl={image.url}
+                            x={image.x}
+                            y={image.y}
+                            size={image.size}
+                            rotation={image.rotation}
+                            isSelected={false}
+                            onSelect={() => onImageSelect(image.id)}
+                            onChange={(newAttrs) => onImageUpdate(image.id, newAttrs)}
+                            opacity={1}
+                        />
+                    ))}
+                </Group>
 
                 {/* Printable area outline */}
                 <Rect
@@ -184,7 +218,7 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                     listening={false}
                 />
 
-                {/* Render text elements on top */}
+                {/* Text elements remain on top */}
                 {texts.map((el) => (
                     <Text
                         key={el.id}
@@ -207,11 +241,10 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                     />
                 ))}
 
-                {/* Transformer for text elements */}
+                {/* Transformer remains on top */}
                 <Transformer
                     ref={transformerRef}
                     boundBoxFunc={(oldBox, newBox) => {
-                        // Limit minimum size
                         if (newBox.width < 10 || newBox.height < 10) {
                             return oldBox;
                         }

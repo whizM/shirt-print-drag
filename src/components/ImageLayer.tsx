@@ -12,6 +12,7 @@ interface ImageLayerProps {
     isSelected: boolean;
     onSelect: () => void;
     onChange: (newAttrs: { x: number; y: number; size: number; rotation: number }) => void;
+    opacity?: number;
 }
 
 const ImageLayer = forwardRef<Konva.Image, ImageLayerProps>(({
@@ -22,7 +23,8 @@ const ImageLayer = forwardRef<Konva.Image, ImageLayerProps>(({
     rotation,
     isSelected,
     onSelect,
-    onChange
+    onChange,
+    opacity = 1
 }, ref) => {
     const [image] = useImage(imageUrl);
     const imageRef = useRef<Konva.Image>(null);
@@ -77,6 +79,7 @@ const ImageLayer = forwardRef<Konva.Image, ImageLayerProps>(({
                         rotation: node.rotation()
                     });
                 }}
+                opacity={opacity}
             />
             {isSelected && (
                 <Transformer

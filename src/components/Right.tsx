@@ -27,6 +27,7 @@ interface RightProps {
     } | null;
     onImageUpdate?: (id: string, updates: Partial<{ size: number; rotation: number; x: number; y: number }>) => void;
     onImageDelete?: (id: string) => void;
+    setSelectedTextId: (id: string | null) => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
@@ -43,7 +44,8 @@ const Right: React.FC<RightProps> = ({
     selectedImageId,
     selectedImage,
     onImageUpdate,
-    onImageDelete
+    onImageDelete,
+    setSelectedTextId
 }) => {
     const [activeTab, setActiveTab] = useState('design');
     const [notification, setNotification] = useState<{ message: string; type: 'error' | 'success' | 'warning' } | null>(null);
@@ -149,6 +151,7 @@ const Right: React.FC<RightProps> = ({
             setNewText(selectedText.text);
             setFontSize(selectedText.fontSize);
             setTextColor(selectedText.color);
+            setSelectedTextId(null);
         }
     };
 
@@ -456,7 +459,7 @@ const Right: React.FC<RightProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={handleCancelEdit}
-                                                className="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                                className="flex-1 items-center flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                             >
                                                 <X className="w-4 h-4 mr-1" />
                                                 Cancel
