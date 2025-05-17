@@ -1,7 +1,7 @@
 import { useState, useImperativeHandle, forwardRef, useRef, useEffect } from 'react';
 import DesignCanvas from './DesignCanvas';
 import type { DesignCanvasRef } from './DesignCanvas';
-import { RefreshCw, ZoomIn, ZoomOut, ChevronDown, RotateCcw, RotateCw } from 'lucide-react';
+import { RefreshCw, ZoomIn, ZoomOut, ChevronDown, RotateCcw, RotateCw, Upload } from 'lucide-react';
 
 // Import t-shirt images
 const tshirtImages = {
@@ -53,6 +53,8 @@ interface TShirtMockupProps {
   selectedTextId?: string | null;
   onTextUpdate?: (id: string, updates: Partial<{ x: number; y: number; fontSize: number; rotation: number }>) => void;
   onDeselect?: () => void;
+  onTextDoubleClick?: (id: string) => void;
+  onImageUpload?: (file: File) => void;
 }
 
 // Make sure the interface is exported
@@ -93,6 +95,8 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   selectedTextId,
   onTextUpdate,
   onDeselect,
+  onTextDoubleClick,
+  onImageUpload,
 }, ref) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
@@ -201,8 +205,19 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
     return scaledArea;
   };
 
+  // Add file input ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0 && onImageUpload) {
+      onImageUpload(files[0]);
+    }
+  };
+
   return (
-    <div className="bg-gray-50 rounded-lg p-4 h-auto flex flex-col">
+    <div className="md:bg-gray-50 bg-none md:rounded-lg rounded-none md:p-4 p-0 h-auto flex flex-col">
       {/* Preview controls */}
       <div className={`flex mb-4 flex-wrap gap-3 ${areControlsWrapped ? 'justify-center' : 'justify-between'}`}>
         <div className="flex space-x-2">
@@ -210,10 +225,10 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
           <div className="relative">
             <button
               onClick={() => setIsShirtSelectorOpen(!isShirtSelectorOpen)}
-              className="bg-white border border-gray-200 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm flex items-center gap-2"
+              className="bg-white border border-gray-200 px-3 p-2 rounded-md text-gray-700 hover:bg-gray-50 font-medium text-sm flex items-center gap-2"
             >
               <span className='leading-6'>Select Style</span>
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className='w-4 h-4' />
             </button>
 
             {isShirtSelectorOpen && (
@@ -240,13 +255,13 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
 
           {/* Existing zoom controls */}
           <button onClick={handleZoomIn} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
-            <ZoomIn />
+            <ZoomIn className='w-4 h-4' />
           </button>
           <button onClick={handleZoomOut} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
-            <ZoomOut />
+            <ZoomOut className='w-4 h-4' />
           </button>
           <button onClick={() => setZoomLevel(1)} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
-            <RefreshCw />
+            <RefreshCw className='w-4 h-4' />
           </button>
         </div>
 
@@ -277,7 +292,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
 
       {/* Product preview */}
       <div
-        className="flex-grow flex items-center justify-center relative bg-white rounded-lg border border-gray-200 overflow-hidden"
+        className="flex-grow flex items-center justify-center relative bg-white md:rounded-lg rounded-none border border-gray-200 overflow-hidden"
         onClick={handleBackgroundClick}
         style={{
           height: scaledDimensions.height,
@@ -303,6 +318,33 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
             }}
           />
 
+          {/* Upload button in the middle of printable area when no images */}
+          {images.length === 0 && (
+            <div
+              className="absolute md:hidden flex flex-col items-center justify-center cursor-pointer"
+              style={{
+                top: `${calculatePrintableArea(containerWidth).top + calculatePrintableArea(containerWidth).height / 2 - 30}px`,
+                left: `${calculatePrintableArea(containerWidth).left + calculatePrintableArea(containerWidth).width / 2 - 30}px`,
+                width: '60px',
+                height: '60px',
+                backgroundColor: 'rgba(219, 234, 254, 0.3)',
+                borderRadius: '8px',
+                zIndex: 10
+              }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="w-5 h-5 text-indigo-500 mb-1" />
+              <p className="text-xs font-medium text-indigo-600">Upload</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileSelect}
+              />
+            </div>
+          )}
+
           <DesignCanvas
             ref={canvasRef}
             containerWidth={scaledDimensions.width}
@@ -315,6 +357,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
             onTextSelect={onTextSelect}
             selectedTextId={selectedTextId}
             onTextUpdate={onTextUpdate}
+            onTextDoubleClick={onTextDoubleClick}
           />
 
           {showPrintableArea && (

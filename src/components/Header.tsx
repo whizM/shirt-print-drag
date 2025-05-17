@@ -2,7 +2,7 @@ import { Palette } from "lucide-react";
 
 const Header = () => {
     return (
-        <header className="border-b border-gray-200 py-4 px-6 bg-white sticky top-0 z-10 w-full">
+        <header className="border-b border-gray-200 py-4 md:px-6 p-x2 bg-white sticky top-0 z-10 w-full">
             <div className="mx-auto flex justify-between items-center px-4">
                 <div className="flex items-center">
                     <div className="w-10 h-10 flex items-center justify-center bg-indigo-100 rounded-md">

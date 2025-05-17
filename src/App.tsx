@@ -42,6 +42,40 @@ function App() {
   const rightPanelRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
+  // Add a ref for the text input
+  const textInputRef = useRef<HTMLInputElement>(null);
+
+  // Add a handler for text double-click
+  const handleTextDoubleClick = (id: string) => {
+    setSelectedTextId(id);
+    setSelectedImageId(null);
+
+    // Set active tab to 'text' in the Right component
+    if (rightComponentRef.current) {
+      rightComponentRef.current.setActiveTab('text');
+    }
+
+    // Focus the text input with a longer delay for mobile
+    setTimeout(() => {
+      if (textInputRef.current) {
+        textInputRef.current.focus();
+
+        // On mobile, we may need to scroll to the input
+        textInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Some mobile browsers require this additional step
+        setTimeout(() => {
+          if (textInputRef.current) {
+            textInputRef.current.focus();
+          }
+        }, 300);
+      }
+    }, 100);
+  };
+
+  // Add a ref for the Right component
+  const rightComponentRef = useRef<{ setActiveTab: (tab: string) => void }>(null);
+
   // Handle clicks outside of canvas and right panel to deselect elements
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -259,7 +293,7 @@ function App() {
     <div className="min-h-screen bg-white">
       <ToastContainer />
       <Header />
-      <div className="lg:w-11/12 md:w-full mx-auto py-6 px-4 md:px-6 flex flex-col md:flex-row gap-8 w-screen justify-center">
+      <div className="lg:w-11/12 md:w-full mx-auto py-6 px-0 md:px-6 flex flex-col md:flex-row gap-8 w-screen justify-center">
         <div ref={canvasContainerRef} className="md:w-3/5 w-full">
           <TShirtMockup
             ref={canvasRef}
@@ -274,10 +308,14 @@ function App() {
             selectedTextId={selectedTextId}
             onTextUpdate={handleTextPositionUpdate}
             onDeselect={handleDeselect}
+            onTextDoubleClick={handleTextDoubleClick}
+            onImageUpload={handleImageUpload}
           />
         </div>
         <div ref={rightPanelRef} className="md:w-2/5 w-full">
           <Right
+            ref={rightComponentRef}
+            textInputRef={textInputRef}
             onImageUpload={handleImageUpload}
             onTextAdd={handleTextAdd}
             onTextUpdate={handleTextUpdate}

@@ -34,6 +34,7 @@ interface DesignCanvasProps {
     selectedTextId?: string | null;
     containerWidth: number;
     onTextUpdate?: (id: string, updates: Partial<{ text: string; fontSize: number; color: string; x: number; y: number; rotation: number }>) => void;
+    onTextDoubleClick?: (id: string) => void;
 }
 
 // Add ref type
@@ -55,7 +56,8 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     onTextSelect,
     selectedTextId,
     onTextUpdate,
-    containerWidth
+    containerWidth,
+    onTextDoubleClick
 }, ref) => {
     const stageRef = useRef<Konva.Stage>(null);
     const imageRefs = useRef<{ [key: string]: Konva.Image | null }>({});
@@ -222,7 +224,7 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                     listening={false}
                 />
 
-                {/* Text elements remain on top */}
+                {/* Text elements with double-click handler */}
                 {texts.map((el) => (
                     <Text
                         key={el.id}
@@ -240,6 +242,23 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                         offsetY={el.fontSize / 2}
                         onClick={() => onTextSelect && onTextSelect(el.id)}
                         onTap={() => onTextSelect && onTextSelect(el.id)}
+                        onDblClick={() => onTextDoubleClick && onTextDoubleClick(el.id)}
+                        onDblTap={() => onTextDoubleClick && onTextDoubleClick(el.id)}
+                        onTouchEnd={(e) => {
+                            const now = Date.now();
+                            const lastTap = textRefs.current[el.id]?.lastTapTime || 0;
+                            const tapLength = now - lastTap;
+
+                            if (tapLength < 500 && tapLength > 0) {
+                                if (onTextDoubleClick) {
+                                    onTextDoubleClick(el.id);
+                                }
+                            }
+
+                            if (textRefs.current[el.id]) {
+                                textRefs.current[el.id].lastTapTime = now;
+                            }
+                        }}
                         onDragEnd={(e) => handleTextDragEnd(e, el.id)}
                         onTransformEnd={() => handleTextTransform(el.id)}
                     />

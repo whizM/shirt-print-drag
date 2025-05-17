@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { AlignHorizontalSpaceAround, AlignVerticalJustifyEnd, AlignVerticalJustifyStart, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd, Trash2, Upload, X } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -28,11 +28,12 @@ interface RightProps {
     onImageUpdate?: (id: string, updates: Partial<{ size: number; rotation: number; x: number; y: number }>) => void;
     onImageDelete?: (id: string) => void;
     setSelectedTextId: (id: string | null) => void;
+    textInputRef?: React.RefObject<HTMLInputElement>;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 
-const Right: React.FC<RightProps> = ({
+const Right = forwardRef<{ setActiveTab: (tab: string) => void }, RightProps>(({
     onImageUpload,
     onTextAdd,
     onTextUpdate,
@@ -45,8 +46,9 @@ const Right: React.FC<RightProps> = ({
     selectedImage,
     onImageUpdate,
     onImageDelete,
-    setSelectedTextId
-}) => {
+    setSelectedTextId,
+    textInputRef
+}, ref) => {
     const [activeTab, setActiveTab] = useState('design');
     const [newText, setNewText] = useState('');
     const [fontSize, setFontSize] = useState(24);
@@ -161,8 +163,15 @@ const Right: React.FC<RightProps> = ({
         }
     };
 
+    // Expose the setActiveTab method
+    useImperativeHandle(ref, () => ({
+        setActiveTab: (tab: string) => {
+            setActiveTab(tab);
+        }
+    }));
+
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 h-full">
+        <div className="bg-white md:rounded-lg rounded-none shadow-sm border border-gray-200 p-4 h-full">
             <div className="mb-4">
                 <div className="flex border-b border-gray-200">
                     <button
@@ -382,6 +391,7 @@ const Right: React.FC<RightProps> = ({
                                     </label>
                                     <input
                                         id="text-input"
+                                        ref={textInputRef}
                                         type="text"
                                         value={newText}
                                         onChange={(e) => setNewText(e.target.value)}
@@ -470,6 +480,6 @@ const Right: React.FC<RightProps> = ({
             </div>
         </div>
     )
-}
+})
 
 export default Right;
