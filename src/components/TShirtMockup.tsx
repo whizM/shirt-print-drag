@@ -219,7 +219,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   return (
     <div className="md:bg-gray-50 bg-none md:rounded-lg rounded-none md:p-4 p-0 h-auto flex flex-col">
       {/* Preview controls */}
-      <div className={`flex mb-4 flex-wrap gap-3 ${areControlsWrapped ? 'justify-center' : 'justify-between'}`}>
+      <div className={`flex mb-4 flex-wrap gap-3 md:px-0 px-2 ${areControlsWrapped ? 'justify-center' : 'justify-between'}`}>
         <div className="flex space-x-2">
           {/* Shirt selector dropdown */}
           <div className="relative">
