@@ -101,23 +101,53 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   const canvasRef = useRef<DesignCanvasRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(500);
+  const [areControlsWrapped, setAreControlsWrapped] = useState(false);
 
   const scaledDimensions = calculateScaledDimensions(containerWidth);
 
   // Function to update width
   const updateWidth = () => {
     if (containerRef.current) {
-      setContainerWidth(containerRef.current.offsetWidth);
+      // Force a reflow to ensure accurate measurements
+      setTimeout(() => {
+        if (containerRef.current) {
+          setContainerWidth(containerRef.current.offsetWidth);
+        }
+      }, 0);
     }
   };
 
   useEffect(() => {
-    // Get initial width
+    // Get initial width after the component has fully rendered
     updateWidth();
 
-    // Add resize listener
+    // Check if controls should be wrapped
+    setAreControlsWrapped(containerWidth < 460);
+
+    // Also listen for window resize events to handle initial sizing better
     window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+
+    // Use ResizeObserver for more accurate tracking of the specific element
+    if (containerRef.current) {
+      const resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const newWidth = entry.contentRect.width;
+          setContainerWidth(newWidth);
+          setAreControlsWrapped(newWidth < 460);
+        }
+      });
+
+      resizeObserver.observe(containerRef.current);
+
+      return () => {
+        window.removeEventListener('resize', updateWidth);
+        resizeObserver.disconnect();
+      };
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+    };
   }, []);
 
   // Expose methods via ref
@@ -174,7 +204,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   return (
     <div className="bg-gray-50 rounded-lg p-4 h-auto flex flex-col">
       {/* Preview controls */}
-      <div className="flex justify-between mb-4 flex-wrap gap-3">
+      <div className={`flex mb-4 flex-wrap gap-3 ${areControlsWrapped ? 'justify-center' : 'justify-between'}`}>
         <div className="flex space-x-2">
           {/* Shirt selector dropdown */}
           <div className="relative">
