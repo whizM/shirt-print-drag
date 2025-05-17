@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 interface RightProps {
     onImageUpload: (file: File) => void;
     onTextAdd?: (text: string, fontSize: number, color: string) => void;
-    onTextUpdate?: (id: string, text: string, fontSize: number, color: string) => void;
+    onTextUpdate?: (updates: Partial<{ text: string; fontSize: number; color: string }>) => void;
     selectedTextId?: string | null;
     selectedText?: {
         id: string;
@@ -132,7 +132,7 @@ const Right = forwardRef<{ setActiveTab: (tab: string) => void }, RightProps>(({
         if (!newText.trim()) return;
 
         if (selectedTextId && onTextUpdate) {
-            onTextUpdate(selectedTextId, newText, fontSize, textColor);
+            onTextUpdate({ text: newText, fontSize, color: textColor });
         } else if (onTextAdd) {
             onTextAdd(newText, fontSize, textColor);
         }

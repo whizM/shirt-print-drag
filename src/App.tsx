@@ -21,7 +21,16 @@ const getScaledPrintableArea = (containerWidth: number) => {
 };
 
 function App() {
-  const [images, setImages] = useState<Array<{
+  // Separate state for front and back designs
+  const [frontImages, setFrontImages] = useState<Array<{
+    id: string;
+    url: string;
+    size: number;
+    rotation: number;
+    x: number;
+    y: number;
+  }>>([]);
+  const [backImages, setBackImages] = useState<Array<{
     id: string;
     url: string;
     size: number;
@@ -30,13 +39,23 @@ function App() {
     y: number;
   }>>([]);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
-  const [designTexts, setDesignTexts] = useState<Array<{
+
+  const [frontTexts, setFrontTexts] = useState<Array<{
+    id: string;
+    text: string;
+    fontSize: number;
+    color: string;
+  }>>([]);
+  const [backTexts, setBackTexts] = useState<Array<{
     id: string;
     text: string;
     fontSize: number;
     color: string;
   }>>([]);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+
+  // Track which view is currently being edited
+  const [activeView, setActiveView] = useState<'front' | 'back'>('front');
 
   const canvasRef = useRef<TShirtMockupRef>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
@@ -46,9 +65,10 @@ function App() {
   const textInputRef = useRef<HTMLInputElement>(null);
 
   // Add a handler for text double-click
-  const handleTextDoubleClick = (id: string) => {
+  const handleTextDoubleClick = (id: string, view: 'front' | 'back') => {
     setSelectedTextId(id);
     setSelectedImageId(null);
+    setActiveView(view);
 
     // Set active tab to 'text' in the Right component
     if (rightComponentRef.current) {
@@ -102,56 +122,67 @@ function App() {
     return document.createElement('img');
   };
 
-  const handleImageUpload = (file: File) => {
-    const url = URL.createObjectURL(file);
-    const img = createImage();
+  const handleImageUpload = (file: File, view: 'front' | 'back') => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const containerWidth = canvasRef.current?.getContainerWidth() || 500;
+        const printableArea = getScaledPrintableArea(containerWidth).front;
 
-    img.onload = () => {
-      const containerWidth = canvasRef.current?.getContainerWidth() || 500;
-      const printableArea = getScaledPrintableArea(containerWidth).front;
+        // Calculate the ratio to fit within printable area
+        const widthRatio = printableArea.width / img.width;
+        const heightRatio = printableArea.height / img.height;
+        const fitRatio = Math.min(widthRatio, heightRatio);
+        const initialSize = fitRatio < 1 ? fitRatio * 100 : 100;
 
-      // Calculate the ratio to fit within printable area
-      const widthRatio = printableArea.width / img.width;
-      const heightRatio = printableArea.height / img.height;
-      const fitRatio = Math.min(widthRatio, heightRatio);
-      const initialSize = fitRatio < 1 ? fitRatio * 100 : 100;
+        const newImage = {
+          id: `img-${Date.now()}`,
+          url: e.target?.result as string,
+          size: initialSize,
+          rotation: 0,
+          x: printableArea.left + printableArea.width / 2,
+          y: printableArea.top + printableArea.height / 2
+        };
 
-      const newImage = {
-        id: Date.now().toString() + Math.random(),
-        url,
-        size: initialSize,
-        rotation: 0,
-        x: printableArea.left + printableArea.width / 2,
-        y: printableArea.top + printableArea.height / 2
+        if (view === 'front') {
+          setFrontImages(prev => [...prev, newImage]);
+        } else {
+          setBackImages(prev => [...prev, newImage]);
+        }
       };
-
-      setImages(prev => [...prev, newImage]);
-      setSelectedImageId(newImage.id);
+      img.src = e.target?.result as string;
     };
-
-    img.src = url;
+    reader.readAsDataURL(file);
   };
 
-  const handleImageSelect = (id: string) => {
+  const handleImageSelect = (id: string, view: 'front' | 'back') => {
     setSelectedImageId(id);
-    setSelectedTextId(null); // Deselect text when selecting an image
+    setSelectedTextId(null);
+    setActiveView(view);
   };
 
-  const handleImageUpdate = (id: string, updates: Partial<{ size: number; rotation: number; x: number; y: number }>) => {
-    setImages(prev => prev.map(img =>
-      img.id === id ? { ...img, ...updates } : img
-    ));
+  const handleImageUpdate = (id: string, updates: Partial<{ size: number; rotation: number; x: number; y: number }>, view: 'front' | 'back') => {
+    if (view === 'front') {
+      setFrontImages(prev =>
+        prev.map(img => img.id === id ? { ...img, ...updates } : img)
+      );
+    } else {
+      setBackImages(prev =>
+        prev.map(img => img.id === id ? { ...img, ...updates } : img)
+      );
+    }
   };
 
   const handleImageDelete = (id: string) => {
-    setImages(prev => prev.filter(img => img.id !== id));
+    setFrontImages(prev => prev.filter(img => img.id !== id));
+    setBackImages(prev => prev.filter(img => img.id !== id));
     if (selectedImageId === id) {
       setSelectedImageId(null);
     }
   };
 
   const handleTextAdd = (text: string, fontSize: number, color: string) => {
-    // Get the current container width for proper scaling
     const containerWidth = canvasRef.current?.getContainerWidth() || 500;
     const printableArea = getScaledPrintableArea(containerWidth).front;
 
@@ -160,49 +191,80 @@ function App() {
       text,
       fontSize,
       color,
-      // Use the current container's scaled printable area for positioning
       x: printableArea.left + printableArea.width / 2,
       y: printableArea.top + printableArea.height / 2,
       rotation: 0
     };
 
-    setDesignTexts(prev => [...prev, newText]);
+    // Add text to the active view
+    if (activeView === 'front') {
+      setFrontTexts(prev => [...prev, newText]);
+    } else {
+      setBackTexts(prev => [...prev, newText]);
+    }
+
     setSelectedTextId(newText.id);
     setSelectedImageId(null);
   };
 
-  const handleTextSelect = (id: string) => {
+  const handleTextSelect = (id: string, view: 'front' | 'back') => {
     setSelectedTextId(id);
-    setSelectedImageId(null); // Deselect image when selecting text
+    setSelectedImageId(null);
+    setActiveView(view);
   };
 
-  const handleTextUpdate = (id: string, text: string, fontSize: number, color: string) => {
-    setDesignTexts(prev => prev.map(item =>
-      item.id === id ? { ...item, text, fontSize, color } : item
-    ));
-    // Don't deselect after update
+  const handleTextUpdate = (
+    id: string,
+    updates: Partial<{
+      x: number;
+      y: number;
+      fontSize: number;
+      rotation: number;
+      text: string;
+      color: string;
+    }>,
+    view: 'front' | 'back'
+  ) => {
+    if (view === 'front') {
+      setFrontTexts(prev =>
+        prev.map(text => text.id === id ? { ...text, ...updates } : text)
+      );
+    } else {
+      setBackTexts(prev =>
+        prev.map(text => text.id === id ? { ...text, ...updates } : text)
+      );
+    }
   };
 
-  const handleTextPositionUpdate = (id: string, updates: Partial<{ x: number; y: number; fontSize: number; rotation: number }>) => {
-    setDesignTexts(prev => prev.map(item =>
-      item.id === id ? { ...item, ...updates } : item
-    ));
-  };
+  // const handleTextPositionUpdate = (id: string, updates: Partial<{ x: number; y: number; fontSize: number; rotation: number }>) => {
+  //   setFrontTexts(prev => prev.map(item =>
+  //     item.id === id ? { ...item, ...updates } : item
+  //   ));
+  //   setBackTexts(prev => prev.map(item =>
+  //     item.id === id ? { ...item, ...updates } : item
+  //   ));
+  // };
 
   const handleTextDelete = (id: string) => {
-    setDesignTexts(prev => prev.filter(item => item.id !== id));
+    setFrontTexts(prev => prev.filter(item => item.id !== id));
+    setBackTexts(prev => prev.filter(item => item.id !== id));
     if (selectedTextId === id) {
       setSelectedTextId(null);
     }
   };
 
-  // Get the selected text object
-  const selectedText = designTexts.find(text => text.id === selectedTextId) || null;
+  // Update the selected text getter to use the active view
+  const selectedText = activeView === 'front'
+    ? frontTexts.find(text => text.id === selectedTextId)
+    : backTexts.find(text => text.id === selectedTextId) || null;
 
   const handleAlignmentChange = (alignment: { horizontal?: 'left' | 'center' | 'right', vertical?: 'top' | 'middle' | 'bottom' }) => {
     if (!selectedImageId) return;
 
-    const selectedImage = images.find(img => img.id === selectedImageId);
+    const selectedImage = activeView === 'front'
+      ? frontImages.find(img => img.id === selectedImageId)
+      : backImages.find(img => img.id === selectedImageId);
+
     if (!selectedImage) return;
 
     const containerWidth = canvasRef.current?.getContainerWidth() || 500;
@@ -231,7 +293,7 @@ function App() {
       newY = printableArea.top + printableArea.height - (img.height * selectedImage.size / 100) / 2;
     }
 
-    handleImageUpdate(selectedImageId, { x: newX, y: newY });
+    handleImageUpdate(selectedImage.id, { x: newX, y: newY }, activeView);
   };
 
   const handlePositionPreset = (preset: 'center' | 'pocket' | 'full-front') => {
@@ -240,15 +302,19 @@ function App() {
     const containerWidth = canvasRef.current?.getContainerWidth() || 500;
     const printableArea = getScaledPrintableArea(containerWidth).front;
 
+    // Get the selected image from the active view
+    const selectedImage = activeView === 'front'
+      ? frontImages.find(img => img.id === selectedImageId)
+      : backImages.find(img => img.id === selectedImageId);
+
+    if (!selectedImage) return;
+
     if (preset === 'center') {
       handleImageUpdate(selectedImageId, {
         x: printableArea.left + printableArea.width / 2,
         y: printableArea.top + printableArea.height / 2
-      });
+      }, activeView); // Use activeView instead of hardcoded 'front'
     } else if (preset === 'pocket') {
-      const selectedImage = images.find(img => img.id === selectedImageId);
-      if (!selectedImage) return;
-
       const img = createImage();
       img.src = selectedImage.url;
 
@@ -258,15 +324,12 @@ function App() {
       const coverRatio = Math.min(widthRatio, heightRatio);
       const newSize = coverRatio * 100 / 3; // Make it 1/3 of the full size
 
-      handleImageUpdate(selectedImageId, {
+      handleImageUpdate(selectedImage.id, {
         x: printableArea.left + printableArea.width * 0.75,
         y: printableArea.top + printableArea.height * 0.25,
         size: newSize
-      });
+      }, activeView); // Use activeView instead of hardcoded 'front'
     } else if (preset === 'full-front') {
-      const selectedImage = images.find(img => img.id === selectedImageId);
-      if (!selectedImage) return;
-
       const img = createImage();
       img.src = selectedImage.url;
 
@@ -276,17 +339,40 @@ function App() {
       const coverRatio = Math.min(widthRatio, heightRatio);
       const newSize = coverRatio * 100;
 
-      handleImageUpdate(selectedImageId, {
+      handleImageUpdate(selectedImage.id, {
         x: printableArea.left + printableArea.width / 2,
         y: printableArea.top + printableArea.height / 2,
         size: newSize
-      });
+      }, activeView); // Use activeView instead of hardcoded 'front'
     }
   };
 
   const handleDeselect = () => {
     setSelectedImageId(null);
     setSelectedTextId(null);
+  };
+
+  // First, update the Right component props interface to match the new view-aware handlers
+  const handleImageUploadFromRight = (file: File) => {
+    // Always upload to the active view
+    handleImageUpload(file, activeView);
+  };
+
+  const handleImageUpdateFromRight = (id: string, updates: Partial<{ size: number; rotation: number; x: number; y: number }>) => {
+    // Always update in the active view
+    handleImageUpdate(id, updates, activeView);
+  };
+
+  // Create a wrapper for text updates from the Right component
+  const handleTextUpdateFromRight = (updates: Partial<{ text: string; fontSize: number; color: string }>) => {
+    if (selectedTextId) {
+      // Always update in the active view
+      handleTextUpdate(selectedTextId, updates, activeView);
+    }
+  };
+
+  const handleViewChange = (view: 'front' | 'back') => {
+    setActiveView(view);
   };
 
   return (
@@ -299,34 +385,39 @@ function App() {
             ref={canvasRef}
             printableArea={getScaledPrintableArea(500).front}
             showPrintableArea={true}
-            images={images}
+            frontImages={frontImages}
+            backImages={backImages}
             selectedImageId={selectedImageId}
             onImageSelect={handleImageSelect}
             onImageUpdate={handleImageUpdate}
-            designTexts={designTexts}
+            frontTexts={frontTexts}
+            backTexts={backTexts}
             onTextSelect={handleTextSelect}
             selectedTextId={selectedTextId}
-            onTextUpdate={handleTextPositionUpdate}
+            onTextUpdate={handleTextUpdate}
             onDeselect={handleDeselect}
             onTextDoubleClick={handleTextDoubleClick}
             onImageUpload={handleImageUpload}
+            onViewChange={handleViewChange}
           />
         </div>
         <div ref={rightPanelRef} className="md:w-2/5 w-full">
           <Right
             ref={rightComponentRef}
             textInputRef={textInputRef}
-            onImageUpload={handleImageUpload}
+            onImageUpload={handleImageUploadFromRight}
             onTextAdd={handleTextAdd}
-            onTextUpdate={handleTextUpdate}
+            onTextUpdate={handleTextUpdateFromRight}
             onTextDelete={handleTextDelete}
             selectedTextId={selectedTextId}
             selectedText={selectedText}
             onAlignmentChange={handleAlignmentChange}
             onPositionPreset={handlePositionPreset}
             selectedImageId={selectedImageId}
-            selectedImage={images.find(img => img.id === selectedImageId) || null}
-            onImageUpdate={handleImageUpdate}
+            selectedImage={activeView === 'front'
+              ? frontImages.find(img => img.id === selectedImageId)
+              : backImages.find(img => img.id === selectedImageId) || null}
+            onImageUpdate={handleImageUpdateFromRight}
             onImageDelete={(id) => handleImageDelete(id)}
             setSelectedTextId={setSelectedTextId}
           />

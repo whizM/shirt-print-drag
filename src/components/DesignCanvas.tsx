@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { Stage, Layer, Transformer, Rect, Text, Group } from 'react-konva';
+import { Stage, Layer, Transformer, Rect, Text, Group, Image as KonvaImage } from 'react-konva';
 import Konva from 'konva';
 import ImageLayer from './ImageLayer';
+import useImage from 'use-image';
 
 interface DesignCanvasProps {
     images: Array<{
@@ -36,6 +37,8 @@ interface DesignCanvasProps {
     containerWidth: number;
     onTextUpdate?: (id: string, updates: Partial<{ text: string; fontSize: number; color: string; x: number; y: number; rotation: number }>) => void;
     onTextDoubleClick?: (id: string) => void;
+    shirtColor: 'white' | 'black';
+    shirtView: 'front' | 'back';
 }
 
 // Add ref type
@@ -63,13 +66,17 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     selectedTextId,
     onTextUpdate,
     containerWidth,
-    onTextDoubleClick
+    onTextDoubleClick,
+    shirtColor,
+    shirtView
 }, ref) => {
     const stageRef = useRef<Konva.Stage>(null);
     const imageRefs = useRef<{ [key: string]: Konva.Image | null }>({});
     const textRefs = useRef<{ [key: string]: TextWithTapTime | null }>({});
     const transformerRef = useRef<Konva.Transformer>(null);
 
+    // Add this to load the t-shirt image
+    const [shirtImage] = useImage(`./images/tshirt-${shirtView}-${shirtColor}.png`);
     // Update transformer when selection changes
     useEffect(() => {
         if (!transformerRef.current) return;
@@ -168,6 +175,17 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
             }}
         >
             <Layer>
+                {/* Add the shirt image as the background */}
+                {shirtImage && (
+                    <KonvaImage
+                        image={shirtImage}
+                        width={containerWidth}
+                        height={containerWidth}
+                        x={0}
+                        y={0}
+                    />
+                )}
+
                 {/* Render faded versions of images first */}
                 {images.map(image => (
                     <ImageLayer

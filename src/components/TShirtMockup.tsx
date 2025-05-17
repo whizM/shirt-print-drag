@@ -3,18 +3,6 @@ import DesignCanvas from './DesignCanvas';
 import type { DesignCanvasRef } from './DesignCanvas';
 import { RefreshCw, ZoomIn, ZoomOut, ChevronDown, RotateCcw, RotateCw, Upload } from 'lucide-react';
 
-// Import t-shirt images
-const tshirtImages = {
-  front: {
-    white: '/images/tshirt-front-white.png',
-    black: '/images/tshirt-front-black.png',
-  },
-  back: {
-    white: '/images/tshirt-back-white.png',
-    black: '/images/tshirt-back-black.png',
-  }
-};
-
 // Add shirt styles
 const shirtStyles = [
   { id: 'tshirt', name: 'Classic T-Shirt', color: 'white' },
@@ -32,7 +20,15 @@ interface PrintableAreaDimensions {
 interface TShirtMockupProps {
   printableArea: PrintableAreaDimensions;
   showPrintableArea: boolean;
-  images: Array<{
+  frontImages: Array<{
+    id: string;
+    url: string;
+    size: number;
+    rotation: number;
+    x: number;
+    y: number;
+  }>;
+  backImages: Array<{
     id: string;
     url: string;
     size: number;
@@ -41,20 +37,33 @@ interface TShirtMockupProps {
     y: number;
   }>;
   selectedImageId: string | null;
-  onImageSelect: (id: string) => void;
-  onImageUpdate: (id: string, updates: Partial<{ size: number; rotation: number; x: number; y: number }>) => void;
-  designTexts: Array<{
+  onImageSelect: (id: string, view: 'front' | 'back') => void;
+  onImageUpdate: (id: string, updates: Partial<{ size: number; rotation: number; x: number; y: number }>, view: 'front' | 'back') => void;
+  frontTexts: Array<{
     id: string;
     text: string;
     fontSize: number;
     color: string;
+    x?: number;
+    y?: number;
+    rotation?: number;
   }>;
-  onTextSelect?: (id: string) => void;
+  backTexts: Array<{
+    id: string;
+    text: string;
+    fontSize: number;
+    color: string;
+    x?: number;
+    y?: number;
+    rotation?: number;
+  }>;
+  onTextSelect?: (id: string, view: 'front' | 'back') => void;
   selectedTextId?: string | null;
-  onTextUpdate?: (id: string, updates: Partial<{ x: number; y: number; fontSize: number; rotation: number }>) => void;
+  onTextUpdate?: (id: string, updates: Partial<{ x: number; y: number; fontSize: number; rotation: number }>, view: 'front' | 'back') => void;
   onDeselect?: () => void;
-  onTextDoubleClick?: (id: string) => void;
-  onImageUpload?: (file: File) => void;
+  onTextDoubleClick?: (id: string, view: 'front' | 'back') => void;
+  onImageUpload?: (file: File, view: 'front' | 'back') => void;
+  onViewChange?: (view: 'front' | 'back') => void;
 }
 
 // Make sure the interface is exported
@@ -86,17 +95,20 @@ const calculateScaledDimensions = (containerWidth: number) => {
 // Update to use forwardRef
 const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   showPrintableArea,
-  images,
+  frontImages,
+  backImages,
   selectedImageId,
   onImageSelect,
   onImageUpdate,
-  designTexts,
+  frontTexts,
+  backTexts,
   onTextSelect,
   selectedTextId,
   onTextUpdate,
   onDeselect,
   onTextDoubleClick,
   onImageUpload,
+  onViewChange,
 }, ref) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
@@ -191,6 +203,10 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
 
   const handleViewChange = (view: 'front' | 'back') => {
     setCurrentView(view);
+    // Notify the parent component about the view change
+    if (onViewChange) {
+      onViewChange(view);
+    }
   };
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
@@ -208,11 +224,37 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   // Add file input ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file selection
+  // Create wrapper functions to pass the current view
+  const handleImageSelect = (id: string) => {
+    onImageSelect(id, currentView);
+  };
+
+  const handleImageUpdate = (id: string, updates: Partial<{ size: number; rotation: number; x: number; y: number }>) => {
+    onImageUpdate(id, updates, currentView);
+  };
+
+  const handleTextSelect = (id: string) => {
+    if (onTextSelect) {
+      onTextSelect(id, currentView);
+    }
+  };
+
+  const handleTextUpdate = (id: string, updates: Partial<{ x: number; y: number; fontSize: number; rotation: number }>) => {
+    if (onTextUpdate) {
+      onTextUpdate(id, updates, currentView);
+    }
+  };
+
+  const handleTextDoubleClick = (id: string) => {
+    if (onTextDoubleClick) {
+      onTextDoubleClick(id, currentView);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0 && onImageUpload) {
-      onImageUpload(files[0]);
+      onImageUpload(files[0], currentView);
     }
   };
 
@@ -308,57 +350,72 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
           }}
           ref={containerRef}
         >
-          {/* T-shirt image */}
-          <img
-            src={tshirtImages[currentView][currentColor]}
-            alt={`T-shirt ${currentView} view`}
-            className="absolute inset-0 w-full h-full object-contain"
-            style={{
-              filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))'
-            }}
-          />
-
           {/* Upload button in the middle of printable area when no images */}
-          {images.length === 0 && (
-            <div
-              className="absolute md:hidden flex flex-col items-center justify-center cursor-pointer"
-              style={{
-                top: `${calculatePrintableArea(containerWidth).top + calculatePrintableArea(containerWidth).height / 2 - 30}px`,
-                left: `${calculatePrintableArea(containerWidth).left + calculatePrintableArea(containerWidth).width / 2 - 30}px`,
-                width: '60px',
-                height: '60px',
-                backgroundColor: 'rgba(219, 234, 254, 0.3)',
-                borderRadius: '8px',
-                zIndex: 10
-              }}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="w-5 h-5 text-indigo-500 mb-1" />
-              <p className="text-xs font-medium text-indigo-600">Upload</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileSelect}
-              />
-            </div>
+          {((currentView === 'front' && frontImages.length === 0) ||
+            (currentView === 'back' && backImages.length === 0)) && (
+              <div
+                className="absolute md:hidden flex flex-col items-center justify-center cursor-pointer"
+                style={{
+                  top: `${calculatePrintableArea(containerWidth).top + calculatePrintableArea(containerWidth).height / 2 - 30}px`,
+                  left: `${calculatePrintableArea(containerWidth).left + calculatePrintableArea(containerWidth).width / 2 - 30}px`,
+                  width: '60px',
+                  height: '60px',
+                  backgroundColor: 'rgba(219, 234, 254, 0.3)',
+                  borderRadius: '8px',
+                  zIndex: 10
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-5 h-5 text-indigo-500 mb-1" />
+                <p className="text-xs font-medium text-indigo-600">Upload</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                />
+              </div>
+            )}
+
+          {/* Design canvas */}
+          {currentView === 'back' && (
+            <DesignCanvas
+              ref={canvasRef}
+              containerWidth={scaledDimensions.width}
+              images={backImages}
+              printableArea={calculatePrintableArea(containerWidth)}
+              selectedImageId={selectedImageId}
+              onImageSelect={handleImageSelect}
+              onImageUpdate={handleImageUpdate}
+              texts={backTexts}
+              onTextSelect={handleTextSelect}
+              selectedTextId={selectedTextId}
+              onTextUpdate={handleTextUpdate}
+              onTextDoubleClick={handleTextDoubleClick}
+              shirtColor={currentColor}
+              shirtView={'back'}
+            />
           )}
 
-          <DesignCanvas
-            ref={canvasRef}
-            containerWidth={scaledDimensions.width}
-            images={images}
-            printableArea={calculatePrintableArea(containerWidth)}
-            selectedImageId={selectedImageId}
-            onImageSelect={onImageSelect}
-            onImageUpdate={onImageUpdate}
-            texts={designTexts}
-            onTextSelect={onTextSelect}
-            selectedTextId={selectedTextId}
-            onTextUpdate={onTextUpdate}
-            onTextDoubleClick={onTextDoubleClick}
-          />
+          {currentView === 'front' && (
+            <DesignCanvas
+              ref={canvasRef}
+              containerWidth={scaledDimensions.width}
+              images={frontImages}
+              printableArea={calculatePrintableArea(containerWidth)}
+              selectedImageId={selectedImageId}
+              onImageSelect={handleImageSelect}
+              onImageUpdate={handleImageUpdate}
+              texts={frontTexts}
+              onTextSelect={handleTextSelect}
+              selectedTextId={selectedTextId}
+              onTextUpdate={handleTextUpdate}
+              onTextDoubleClick={handleTextDoubleClick}
+              shirtColor={currentColor}
+              shirtView={'front'}
+            />
+          )}
 
           {showPrintableArea && (
             <div
