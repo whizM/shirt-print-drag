@@ -408,7 +408,7 @@ function App() {
       const response = await fetch('https://api.remove.bg/v1.0/removebg', {
         method: 'POST',
         headers: {
-          'X-Api-Key': 'UGaHX6S8TANvkG4qrAMvTf7F'
+          'X-Api-Key': import.meta.env.VITE_BACKGROUND_REMOVE_API_KEY
         },
         body: formData,
       });
@@ -517,7 +517,7 @@ function App() {
   };
 
   // Add Uploadcare configuration
-  const UPLOADCARE_PUBLIC_KEY = '430bdd5c900d15d324d2'; // Replace with your actual public key
+  const UPLOADCARE_PUBLIC_KEY = import.meta.env.VITE_UPSCALE_PUBLIC_KEY;
 
   // Update the handleExportDesign function to properly handle both views
   const handleExportDesign = async () => {
@@ -533,24 +533,17 @@ function App() {
       // Array to store both design URLs
       const designUrls: { front?: string, back?: string } = {};
 
-      // Process both views
       for (const view of ['front', 'back'] as const) {
-        // Switch to the view we want to capture
         if (view !== activeView) {
-          // Set the view and wait for the component to update
           setActiveView(view);
-          // Need to wait for the view to update
-          await new Promise(resolve => setTimeout(resolve, 300)); // Increased timeout for view change
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
 
-        // Force a re-render of the canvas for the current view
         if (canvasRef.current) {
           canvasRef.current.refreshView(view);
-          // Wait for the canvas to update
           await new Promise(resolve => setTimeout(resolve, 200));
         }
 
-        // Get the canvas element from the stage for the current view
         const canvas = canvasRef.current.getStageCanvas();
 
         if (!canvas) {
@@ -560,7 +553,7 @@ function App() {
             isLoading: false,
             autoClose: 3000
           });
-          continue; // Skip this view but try the other one
+          continue;
         }
 
         try {
