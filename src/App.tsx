@@ -67,8 +67,6 @@ function App() {
 
   // Track which view is currently being edited
   const [activeView, setActiveView] = useState<'front' | 'back'>('front');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [resultUrl, setResultUrl] = useState('');
   const canvasRef = useRef<TShirtMockupRef>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -417,8 +415,6 @@ function App() {
 
       if (response.ok) {
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setResultUrl(url);
 
         // Create a new File from the blob
         const newFile = new File([blob], "removed-bg.png", { type: "image/png" });
