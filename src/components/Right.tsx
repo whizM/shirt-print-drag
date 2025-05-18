@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { AlignHorizontalSpaceAround, AlignVerticalJustifyEnd, AlignVerticalJustifyStart, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd, Trash2, Upload, X, AlignVerticalJustifyCenter } from "lucide-react";
+import { AlignHorizontalSpaceAround, AlignVerticalJustifyEnd, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd, Trash2, Upload, X, AlignVerticalJustifyCenter } from "lucide-react";
 import { toast } from "react-toastify";
 
 interface RightProps {
@@ -238,78 +238,56 @@ const Right = forwardRef<{ setActiveTab: (tab: string) => void }, RightProps>(({
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Alignment</label>
-                                        <div className="grid grid-cols-3 gap-2 text-gray-700">
+                                        <div className="flex items-center gap-2 text-gray-700">
+                                            Horizontal
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'left', vertical: 'top' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Top Left"
-                                            >
-                                                <div className="transform rotate-45">
-                                                    <AlignHorizontalJustifyStart className="w-4 h-4" />
-                                                </div>
-                                            </button>
-                                            <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ vertical: 'top', horizontal: 'center' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Top Center"
-                                            >
-                                                <AlignVerticalJustifyStart className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'right', vertical: 'top' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Top Right"
-                                            >
-                                                <div className="transform -rotate-45">
-                                                    <AlignHorizontalJustifyEnd className="w-4 h-4" />
-                                                </div>
-                                            </button>
-
-                                            <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'left', vertical: 'middle' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Middle Left"
+                                                onClick={() => onAlignmentChange?.({ horizontal: 'left' })}
+                                                className="p-2 border flex items-center justify-center text-gray-700 border-gray-200 rounded-md hover:bg-gray-50"
+                                                title="Align Left"
                                             >
                                                 <AlignHorizontalJustifyStart className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'center', vertical: 'middle' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Center"
+                                                onClick={() => onAlignmentChange?.({ horizontal: 'center' })}
+                                                className="p-2 border flex items-center justify-center text-gray-700 border-gray-200 rounded-md hover:bg-gray-50"
+                                                title="Align Center"
                                             >
                                                 <AlignHorizontalSpaceAround className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'right', vertical: 'middle' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Middle Right"
+                                                onClick={() => onAlignmentChange?.({ horizontal: 'right' })}
+                                                className="p-2 border flex items-center justify-center text-gray-700 border-gray-200 rounded-md hover:bg-gray-50"
+                                                title="Align Right"
                                             >
                                                 <AlignHorizontalJustifyEnd className="w-4 h-4" />
                                             </button>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-gray-700">
+                                            Vertical
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 mt-2">
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'left', vertical: 'bottom' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Bottom Left"
+                                                onClick={() => onAlignmentChange?.({ vertical: 'top' })}
+                                                className="p-2 border flex items-center justify-center text-gray-700 border-gray-200 rounded-md hover:bg-gray-50"
+                                                title="Align Top"
                                             >
-                                                <div className="transform -rotate-45">
-                                                    <AlignHorizontalJustifyStart className="w-4 h-4" />
-                                                </div>
+                                                <AlignVerticalJustifyCenter className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ vertical: 'bottom', horizontal: 'center' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Bottom Center"
+                                                onClick={() => onAlignmentChange?.({ vertical: 'middle' })}
+                                                className="p-2 border flex items-center justify-center text-gray-700 border-gray-200 rounded-md hover:bg-gray-50"
+                                                title="Align Middle"
+                                            >
+                                                <AlignVerticalJustifyCenter className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => onAlignmentChange?.({ vertical: 'bottom' })}
+                                                className="p-2 border flex items-center justify-center text-gray-700 border-gray-200 rounded-md hover:bg-gray-50"
+                                                title="Align Bottom"
                                             >
                                                 <AlignVerticalJustifyEnd className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => onAlignmentChange && onAlignmentChange({ horizontal: 'right', vertical: 'bottom' })}
-                                                className="p-2 border border-gray-300 rounded hover:bg-gray-100 flex items-center justify-center"
-                                                title="Bottom Right"
-                                            >
-                                                <div className="transform rotate-45">
-                                                    <AlignHorizontalJustifyEnd className="w-4 h-4" />
-                                                </div>
                                             </button>
                                         </div>
                                     </div>
