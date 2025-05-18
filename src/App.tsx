@@ -516,174 +516,103 @@ function App() {
     handleTextUpdate(selectedText.id, { x: newX, y: newY }, activeView);
   };
 
-  // Add Uploadcare configuration
-  const UPLOADCARE_PUBLIC_KEY = import.meta.env.VITE_UPSCALE_PUBLIC_KEY;
-
-  // Update the handleExportDesign function to properly handle both views
-  const handleExportDesign = async () => {
+  // Update the handleExportDesign function to take a specific view
+  const handleExportDesign = async (viewToExport: 'front' | 'back') => {
     if (!canvasRef.current) return;
 
     try {
       // Show loading state
-      const loadingId = toast.loading("Preparing your designs...");
+      const loadingId = toast.loading(`Preparing your ${viewToExport} design...`);
 
       // Save current view to restore it later
       const currentViewBackup = activeView;
 
-      // Array to store both design URLs
-      const designUrls: { front?: string, back?: string } = {};
-
-      for (const view of ['front', 'back'] as const) {
-        if (view !== activeView) {
-          setActiveView(view);
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-
-        if (canvasRef.current) {
-          canvasRef.current.refreshView(view);
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-
-        const canvas = canvasRef.current.getStageCanvas();
-
-        if (!canvas) {
-          toast.update(loadingId, {
-            render: `Could not generate ${view} design image`,
-            type: "error",
-            isLoading: false,
-            autoClose: 3000
-          });
-          continue;
-        }
-
-        try {
-          // Convert the canvas to a blob and upload
-          const blob = await new Promise<Blob | null>((resolve) => {
-            canvas.toBlob(resolve, 'image/png');
-          });
-
-          if (!blob) {
-            toast.update(loadingId, {
-              render: `Failed to create ${view} image`,
-              type: "warning",
-              isLoading: true,
-              autoClose: false
-            });
-            continue;
-          }
-
-          // Create a File object from the blob
-          const file = new File([blob], `tshirt-${view}.png`, { type: "image/png" });
-
-          // Create FormData for Uploadcare
-          const formData = new FormData();
-          formData.append('UPLOADCARE_PUB_KEY', UPLOADCARE_PUBLIC_KEY);
-          formData.append('file', file);
-
-          // Upload to Uploadcare
-          const response = await fetch('https://upload.uploadcare.com/base/', {
-            method: 'POST',
-            body: formData,
-          });
-
-          const data = await response.json();
-
-          if (data.file) {
-            // Store the URL for this view
-            designUrls[view] = `https://ucarecdn.com/${data.file}/`;
-            toast.update(loadingId, {
-              render: `${view.charAt(0).toUpperCase() + view.slice(1)} design uploaded...`,
-              type: "info",
-              isLoading: true,
-              autoClose: false
-            });
-          } else {
-            throw new Error(`${view} upload failed`);
-          }
-        } catch (error) {
-          toast.update(loadingId, {
-            render: `${view} upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            type: "warning",
-            isLoading: true,
-            autoClose: false
-          });
-        }
+      // Switch to the view we want to export if it's different
+      if (viewToExport !== activeView) {
+        setActiveView(viewToExport);
+        // Need to wait for the view to update
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
-      // Restore the original view
-      setActiveView(currentViewBackup);
+      // Force a re-render of the canvas for the current view
+      if (canvasRef.current) {
+        canvasRef.current.refreshView(viewToExport);
+        // Wait for the canvas to update
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
 
-      // Check if we have at least one successful upload
-      if (designUrls.front || designUrls.back) {
+      // Get the canvas element from the stage
+      const canvas = canvasRef.current.getStageCanvas();
+
+      if (!canvas) {
         toast.update(loadingId, {
-          render: "Designs uploaded successfully!",
-          type: "success",
-          isLoading: false,
-          autoClose: 3000
-        });
-
-        // Log the URLs
-        console.log('Design URLs:', designUrls);
-
-        // Create a simple results page to show both designs
-        if (designUrls.front && designUrls.back) {
-          const resultsHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <title>Your T-Shirt Designs</title>
-              <style>
-                body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-                .designs { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
-                .design { margin: 10px; }
-                img { max-width: 400px; border: 1px solid #ddd; }
-                h2 { color: #333; }
-                .download { margin-top: 10px; }
-                a { display: inline-block; padding: 8px 16px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; }
-              </style>
-            </head>
-            <body>
-              <h1>Your T-Shirt Designs</h1>
-              <div class="designs">
-                <div class="design">
-                  <h2>Front Design</h2>
-                  <img src="${designUrls.front}" alt="Front Design">
-                  <div class="download">
-                    <a href="${designUrls.front}" download="tshirt-front.png">Download Front</a>
-                  </div>
-                </div>
-                <div class="design">
-                  <h2>Back Design</h2>
-                  <img src="${designUrls.back}" alt="Back Design">
-                  <div class="download">
-                    <a href="${designUrls.back}" download="tshirt-back.png">Download Back</a>
-                  </div>
-                </div>
-              </div>
-            </body>
-            </html>
-          `;
-
-          // Create a blob with the HTML content
-          const htmlBlob = new Blob([resultsHTML], { type: 'text/html' });
-          const resultsUrl = URL.createObjectURL(htmlBlob);
-
-          // Open the results page in a new tab
-          window.open(resultsUrl, '_blank');
-        } else {
-          // If only one design was uploaded, open it directly
-          const url = designUrls.front || designUrls.back;
-          if (url) {
-            window.open(url, '_blank');
-          }
-        }
-      } else {
-        toast.update(loadingId, {
-          render: "Failed to upload any designs",
+          render: `Could not generate ${viewToExport} design image`,
           type: "error",
           isLoading: false,
           autoClose: 3000
         });
+        return;
+      }
+
+      try {
+        // Convert the canvas to a blob and upload
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(resolve, 'image/png');
+        });
+
+        if (!blob) {
+          toast.update(loadingId, {
+            render: `Failed to create ${viewToExport} image`,
+            type: "error",
+            isLoading: false,
+            autoClose: 3000
+          });
+          return;
+        }
+
+        // Create a File object from the blob
+        const file = new File([blob], `tshirt-${viewToExport}.png`, { type: "image/png" });
+
+        // Create FormData for Uploadcare
+        const formData = new FormData();
+        formData.append('UPLOADCARE_PUB_KEY', import.meta.env.VITE_UPSCALE_PUBLIC_KEY);
+        formData.append('file', file);
+
+        // Upload to Uploadcare
+        const response = await fetch('https://upload.uploadcare.com/base/', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.file) {
+          const imageUrl = `https://ucarecdn.com/${data.file}/`;
+
+          toast.update(loadingId, {
+            render: `${viewToExport.charAt(0).toUpperCase() + viewToExport.slice(1)} design uploaded successfully!`,
+            type: "success",
+            isLoading: false,
+            autoClose: 3000
+          });
+
+          // Open the image in a new tab
+          window.open(imageUrl, '_blank');
+        } else {
+          throw new Error(`${viewToExport} upload failed`);
+        }
+      } catch (error) {
+        toast.update(loadingId, {
+          render: `${viewToExport} upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          type: "error",
+          isLoading: false,
+          autoClose: 5000
+        });
+      } finally {
+        // Restore the original view
+        if (viewToExport !== currentViewBackup) {
+          setActiveView(currentViewBackup);
+        }
       }
     } catch (error) {
       toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -726,10 +655,17 @@ function App() {
             </button>
 
             <button
-              onClick={handleExportDesign}
+              onClick={() => handleExportDesign('front')}
               className="bg-green-500 text-white p-2 mt-2 rounded-md hover:bg-green-600"
             >
-              Export Design
+              Export Front
+            </button>
+
+            <button
+              onClick={() => handleExportDesign('back')}
+              className="bg-blue-500 text-white p-2 mt-2 rounded-md hover:bg-blue-600"
+            >
+              Export Back
             </button>
           </div>
         </div>
