@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { AlignHorizontalSpaceAround, AlignVerticalJustifyEnd, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd, Trash2, Upload, X, AlignVerticalJustifyCenter } from "lucide-react";
+import { AlignHorizontalSpaceAround, AlignVerticalJustifyEnd, AlignHorizontalJustifyStart, AlignHorizontalJustifyEnd, Trash2, Upload, X, AlignVerticalJustifyCenter, AlignVerticalJustifyStart } from "lucide-react";
 import { toast } from "react-toastify";
 
 interface RightProps {
@@ -273,7 +273,7 @@ const Right = forwardRef<{ setActiveTab: (tab: string) => void }, RightProps>(({
                                                 className="p-2 border flex items-center justify-center text-gray-700 border-gray-200 rounded-md hover:bg-gray-50"
                                                 title="Align Top"
                                             >
-                                                <AlignVerticalJustifyCenter className="w-4 h-4" />
+                                                <AlignVerticalJustifyStart className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={() => onAlignmentChange?.({ vertical: 'middle' })}
@@ -531,7 +531,7 @@ const Right = forwardRef<{ setActiveTab: (tab: string) => void }, RightProps>(({
                                             className="p-2 border flex items-center justify-center text-gray-700 border-gray-200 rounded-md hover:bg-gray-50"
                                             title="Align Top"
                                         >
-                                            <AlignVerticalJustifyCenter className="w-4 h-4" />
+                                            <AlignVerticalJustifyStart className="w-4 h-4" />
                                         </button>
                                         <button
                                             onClick={() => onTextAlignmentChange?.({ vertical: 'middle' })}
