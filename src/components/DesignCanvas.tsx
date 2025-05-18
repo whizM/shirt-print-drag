@@ -3,7 +3,6 @@ import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Stage, Layer, Transformer, Rect, Text, Group } from 'react-konva';
 import Konva from 'konva';
 import ImageLayer from './ImageLayer';
-import { HardDriveDownload } from 'lucide-react';
 interface DesignCanvasProps {
     images: Array<{
         id: string;
