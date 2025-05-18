@@ -4,7 +4,7 @@ import { Stage, Layer, Transformer, Rect, Text, Group, Image as KonvaImage } fro
 import Konva from 'konva';
 import ImageLayer from './ImageLayer';
 import useImage from 'use-image';
-
+import { HardDriveDownload } from 'lucide-react';
 interface DesignCanvasProps {
     images: Array<{
         id: string;
@@ -28,6 +28,7 @@ interface DesignCanvasProps {
         text: string;
         fontSize: number;
         color: string;
+        font?: string;
         x?: number;
         y?: number;
         rotation?: number;
@@ -47,6 +48,8 @@ export interface DesignCanvasRef {
     getImageDimensions: () => { width: number; height: number; scaleX: number; scaleY: number } | null;
     getPosition: () => { x: number; y: number } | null;
     getContainerWidth: () => number;
+    getStageCanvas: () => HTMLCanvasElement | null;
+    getStage: () => Konva.Stage | null;
 }
 
 // Add this interface to extend Konva.Text with our custom property
@@ -132,7 +135,16 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
             }
             return null;
         },
-        getContainerWidth: () => containerWidth
+        getContainerWidth: () => containerWidth,
+        getStageCanvas: () => {
+            if (stageRef.current) {
+                return stageRef.current.toCanvas({ pixelRatio: 2 });
+            }
+            return null;
+        },
+        getStage: () => {
+            return stageRef.current;
+        }
     }));
 
     const handleTextDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
@@ -161,150 +173,169 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     };
 
     return (
-        <Stage
-            ref={stageRef}
-            width={containerWidth}
-            height={500}
-            style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: '100%',
-                height: '100%',
-                transform: 'translate(-50%, -50%)',
-            }}
-        >
-            <Layer>
-                {/* Add the shirt image as the background */}
-                {shirtImage && (
-                    <KonvaImage
-                        image={shirtImage}
-                        width={containerWidth}
-                        height={containerWidth}
-                        x={0}
-                        y={0}
-                    />
-                )}
+        <>
+            <Stage
+                ref={stageRef}
+                width={containerWidth}
+                height={500}
+                style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: '100%',
+                    height: '100%',
+                    transform: 'translate(-50%, -50%)',
+                }}
+            >
+                <Layer>
+                    {/* Add the shirt image as the background */}
+                    {shirtImage && (
+                        <KonvaImage
+                            image={shirtImage}
+                            width={containerWidth}
+                            height={containerWidth}
+                            x={0}
+                            y={0}
+                        />
+                    )}
 
-                {/* Render faded versions of images first */}
-                {images.map(image => (
-                    <ImageLayer
-                        key={`faded-${image.id}`}
-                        ref={(node) => {
-                            // Don't store ref for faded version
-                            if (selectedImageId === image.id) {
-                                imageRefs.current[image.id] = node;
-                            }
-                        }}
-                        imageUrl={image.url}
-                        x={image.x}
-                        y={image.y}
-                        size={image.size}
-                        rotation={image.rotation}
-                        isSelected={selectedImageId === image.id}
-                        onSelect={() => onImageSelect(image.id)}
-                        onChange={(newAttrs) => onImageUpdate(image.id, newAttrs)}
-                        opacity={0.3}
-                    />
-                ))}
-
-                {/* Clipped version on top */}
-                <Group
-                    clipFunc={(ctx) => {
-                        ctx.beginPath();
-                        ctx.rect(
-                            printableArea.left,
-                            printableArea.top,
-                            printableArea.width,
-                            printableArea.height
-                        );
-                        ctx.closePath();
-                    }}
-                >
+                    {/* Render faded versions of images first */}
                     {images.map(image => (
                         <ImageLayer
-                            key={`clipped-${image.id}`}
+                            key={`faded-${image.id}`}
+                            ref={(node) => {
+                                // Don't store ref for faded version
+                                if (selectedImageId === image.id) {
+                                    imageRefs.current[image.id] = node;
+                                }
+                            }}
                             imageUrl={image.url}
                             x={image.x}
                             y={image.y}
                             size={image.size}
                             rotation={image.rotation}
-                            isSelected={false}
+                            isSelected={selectedImageId === image.id}
                             onSelect={() => onImageSelect(image.id)}
                             onChange={(newAttrs) => onImageUpdate(image.id, newAttrs)}
-                            opacity={1}
+                            opacity={0.3}
                         />
                     ))}
-                </Group>
 
-                {/* Printable area outline */}
-                <Rect
-                    x={printableArea.left}
-                    y={printableArea.top}
-                    width={printableArea.width}
-                    height={printableArea.height}
-                    strokeWidth={2}
-                    dash={[4, 4]}
-                    listening={false}
-                />
-
-                {/* Text elements with double-click handler */}
-                {texts.map((el) => (
-                    <Text
-                        key={el.id}
-                        ref={(node) => {
-                            // Cast the node to our extended type
-                            textRefs.current[el.id] = node as TextWithTapTime;
+                    {/* Clipped version on top */}
+                    <Group
+                        clipFunc={(ctx) => {
+                            ctx.beginPath();
+                            ctx.rect(
+                                printableArea.left,
+                                printableArea.top,
+                                printableArea.width,
+                                printableArea.height
+                            );
+                            ctx.closePath();
                         }}
-                        text={el.text}
-                        x={el.x || printableArea.left + printableArea.width / 2}
-                        y={el.y || printableArea.top + printableArea.height / 2}
-                        fontSize={el.fontSize}
-                        fill={el.color}
-                        rotation={el.rotation || 0}
-                        draggable
-                        offsetX={el.text.length * el.fontSize / 4}
-                        offsetY={el.fontSize / 2}
-                        onClick={() => onTextSelect && onTextSelect(el.id)}
-                        onTap={() => onTextSelect && onTextSelect(el.id)}
-                        onDblClick={() => onTextDoubleClick && onTextDoubleClick(el.id)}
-                        onDblTap={() => onTextDoubleClick && onTextDoubleClick(el.id)}
-                        onTouchEnd={(_) => { // Use underscore to indicate unused parameter
-                            const now = Date.now();
-                            const lastTap = textRefs.current[el.id]?.lastTapTime || 0;
-                            const tapLength = now - lastTap;
+                    >
+                        {images.map(image => (
+                            <ImageLayer
+                                key={`clipped-${image.id}`}
+                                imageUrl={image.url}
+                                x={image.x}
+                                y={image.y}
+                                size={image.size}
+                                rotation={image.rotation}
+                                isSelected={false}
+                                onSelect={() => onImageSelect(image.id)}
+                                onChange={(newAttrs) => onImageUpdate(image.id, newAttrs)}
+                                opacity={1}
+                            />
+                        ))}
+                    </Group>
 
-                            if (tapLength < 500 && tapLength > 0) {
-                                if (onTextDoubleClick) {
-                                    onTextDoubleClick(el.id);
-                                }
-                            }
-
-                            // Don't use optional chaining on left side of assignment
-                            if (textRefs.current[el.id]) {
-                                textRefs.current[el.id]!.lastTapTime = now;
-                            }
-                        }}
-                        onDragEnd={(e) => handleTextDragEnd(e, el.id)}
-                        onTransformEnd={() => handleTextTransform(el.id)}
+                    {/* Printable area outline */}
+                    <Rect
+                        x={printableArea.left}
+                        y={printableArea.top}
+                        width={printableArea.width}
+                        height={printableArea.height}
+                        strokeWidth={2}
+                        dash={[4, 4]}
+                        listening={false}
                     />
-                ))}
 
-                {/* Transformer remains on top */}
-                <Transformer
-                    ref={transformerRef}
-                    boundBoxFunc={(oldBox, newBox) => {
-                        if (newBox.width < 10 || newBox.height < 10) {
-                            return oldBox;
-                        }
-                        return newBox;
-                    }}
-                    enabledAnchors={['middle-left', 'middle-right']}
-                    rotateEnabled={true}
-                    keepRatio={false}
-                />
-            </Layer>
-        </Stage>
+                    {/* Text elements with double-click handler */}
+                    {texts.map((el) => (
+                        <Text
+                            key={el.id}
+                            ref={(node) => {
+                                // Cast the node to our extended type
+                                textRefs.current[el.id] = node as TextWithTapTime;
+                            }}
+                            text={el.text}
+                            x={el.x || printableArea.left + printableArea.width / 2}
+                            y={el.y || printableArea.top + printableArea.height / 2}
+                            fontSize={el.fontSize}
+                            fill={el.color}
+                            fontFamily={el.font || 'Arial'}
+                            rotation={el.rotation || 0}
+                            draggable
+                            offsetX={el.text.length * el.fontSize / 4}
+                            offsetY={el.fontSize / 2}
+                            onClick={() => onTextSelect && onTextSelect(el.id)}
+                            onTap={() => onTextSelect && onTextSelect(el.id)}
+                            onDblClick={() => onTextDoubleClick && onTextDoubleClick(el.id)}
+                            onDblTap={() => onTextDoubleClick && onTextDoubleClick(el.id)}
+                            onTouchEnd={(_) => { // Use underscore to indicate unused parameter
+                                const now = Date.now();
+                                const lastTap = textRefs.current[el.id]?.lastTapTime || 0;
+                                const tapLength = now - lastTap;
+
+                                if (tapLength < 500 && tapLength > 0) {
+                                    if (onTextDoubleClick) {
+                                        onTextDoubleClick(el.id);
+                                    }
+                                }
+
+                                // Don't use optional chaining on left side of assignment
+                                if (textRefs.current[el.id]) {
+                                    textRefs.current[el.id]!.lastTapTime = now;
+                                }
+                            }}
+                            onDragEnd={(e) => handleTextDragEnd(e, el.id)}
+                            onTransformEnd={() => handleTextTransform(el.id)}
+                        />
+                    ))}
+
+                    {/* Transformer remains on top */}
+                    <Transformer
+                        ref={transformerRef}
+                        boundBoxFunc={(oldBox, newBox) => {
+                            if (newBox.width < 10 || newBox.height < 10) {
+                                return oldBox;
+                            }
+                            return newBox;
+                        }}
+                        enabledAnchors={['middle-left', 'middle-right']}
+                        rotateEnabled={true}
+                        keepRatio={false}
+                    />
+                </Layer>
+            </Stage>
+            {/* Download Konva canvas   */}
+            <button
+                className="absolute bottom-4 right-4 bg-indigo-100 hover:bg-indigo-200 text-indigo-200 hover:text-indigo-600 p-3 rounded-full"
+                onClick={() => {
+                    const canvas = stageRef.current?.toCanvas({ pixelRatio: 2 });
+                    if (canvas) {
+                        const image = canvas.toDataURL('image/png');
+                        const link = document.createElement('a');
+                        link.href = image;
+                        link.download = 't-shirt-mockup.png';
+                        link.click();
+                    }
+                }}
+            >
+                <HardDriveDownload className="w-6 h-6" />
+            </button>
+        </>
     );
 });
 

@@ -72,6 +72,8 @@ export interface TShirtMockupRef {
   getImageDimensions: () => { width: number; height: number; scaleX: number; scaleY: number } | null;
   getPosition: () => { x: number; y: number } | null;
   getContainerWidth: () => number;
+  getStageCanvas: () => HTMLCanvasElement | null;
+  refreshView: (view: 'front' | 'back') => void;
 }
 
 // Add this function at the top of the file
@@ -185,7 +187,26 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
       }
       return null;
     },
-    getContainerWidth: () => containerWidth
+    getContainerWidth: () => containerWidth,
+    getStageCanvas: () => {
+      if (canvasRef.current) {
+        return canvasRef.current.getStageCanvas();
+      }
+      return null;
+    },
+    refreshView: (view: 'front' | 'back') => {
+      setCurrentView(view);
+      // Force a re-render
+      setTimeout(() => {
+        if (canvasRef.current) {
+          // This will trigger a re-render of the canvas with the correct view
+          const stage = canvasRef.current.getStage();
+          if (stage) {
+            stage.batchDraw();
+          }
+        }
+      }, 50);
+    }
   }));
 
   const handleZoomIn = () => {
@@ -206,6 +227,14 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
     // Notify the parent component about the view change
     if (onViewChange) {
       onViewChange(view);
+    }
+  };
+
+  const toggleView = () => {
+    setCurrentView(currentView === 'front' ? 'back' : 'front');
+    // Notify the parent component about the view change
+    if (onViewChange) {
+      onViewChange(currentView === 'front' ? 'back' : 'front');
     }
   };
 
@@ -261,8 +290,8 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   return (
     <div className="md:bg-gray-50 bg-none md:rounded-lg rounded-none md:p-4 p-0 h-auto flex flex-col">
       {/* Preview controls */}
-      <div className={`flex mb-4 flex-wrap gap-3 md:px-0 px-2 ${areControlsWrapped ? 'justify-center' : 'justify-between'}`}>
-        <div className="flex space-x-2">
+      <div className={` hidden md:flex mb-4 flex-wrap gap-3 md:px-0 px-2 ${areControlsWrapped ? 'justify-center' : 'justify-between'}`}>
+        <div className="space-x-2 flex">
           {/* Shirt selector dropdown */}
           <div className="relative">
             <button
@@ -341,6 +370,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
           maxHeight: '600px'
         }}
       >
+
         <div
           className="relative w-full h-full transition-transform duration-200"
           style={{
@@ -429,6 +459,27 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
             ></div>
           )}
         </div>
+        <div className='flex flex-col gap-2 absolute top-4 left-4 md:hidden'>
+          {/* Existing zoom controls */}
+          <button onClick={handleZoomIn} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
+            <ZoomIn className='w-4 h-4' />
+          </button>
+          <button onClick={handleZoomOut} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
+            <ZoomOut className='w-4 h-4' />
+          </button>
+          <button onClick={() => setZoomLevel(1)} className="bg-white border border-gray-200 p-2 rounded-md text-gray-600 hover:bg-gray-50">
+            <RefreshCw className='w-4 h-4' />
+          </button>
+        </div>
+        <button
+          onClick={toggleView}
+          className={`absolute top-4 right-4 md:hidden p-2 rounded-md text-sm font-medium flex items-center gap-2 ${currentView === 'front'
+            ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+            : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+            }`}
+        >
+          <RotateCcw className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

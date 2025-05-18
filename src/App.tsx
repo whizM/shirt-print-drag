@@ -5,6 +5,7 @@ import './App.css'
 import Header from './components/Header'
 import Right from './components/Right'
 import { ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 
 const getScaledPrintableArea = (containerWidth: number) => {
   const baseWidth = 500;
@@ -29,6 +30,7 @@ function App() {
     rotation: number;
     x: number;
     y: number;
+    blob: Blob;
   }>>([]);
   const [backImages, setBackImages] = useState<Array<{
     id: string;
@@ -37,6 +39,7 @@ function App() {
     rotation: number;
     x: number;
     y: number;
+    blob: Blob;
   }>>([]);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
@@ -45,18 +48,27 @@ function App() {
     text: string;
     fontSize: number;
     color: string;
+    font?: string;
+    x?: number;
+    y?: number;
+    rotation?: number;
   }>>([]);
   const [backTexts, setBackTexts] = useState<Array<{
     id: string;
     text: string;
     fontSize: number;
     color: string;
+    font?: string;
+    x?: number;
+    y?: number;
+    rotation?: number;
   }>>([]);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
 
   // Track which view is currently being edited
   const [activeView, setActiveView] = useState<'front' | 'back'>('front');
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [resultUrl, setResultUrl] = useState('');
   const canvasRef = useRef<TShirtMockupRef>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -142,7 +154,8 @@ function App() {
           size: initialSize,
           rotation: 0,
           x: printableArea.left + printableArea.width / 2,
-          y: printableArea.top + printableArea.height / 2
+          y: printableArea.top + printableArea.height / 2,
+          blob: file // Store the original file instead of creating a new blob
         };
 
         if (view === 'front') {
@@ -182,7 +195,7 @@ function App() {
     }
   };
 
-  const handleTextAdd = (text: string, fontSize: number, color: string) => {
+  const handleTextAdd = (text: string, fontSize: number, color: string, font: string = 'Arial') => {
     const containerWidth = canvasRef.current?.getContainerWidth() || 500;
     const printableArea = getScaledPrintableArea(containerWidth).front;
 
@@ -191,6 +204,7 @@ function App() {
       text,
       fontSize,
       color,
+      font,
       x: printableArea.left + printableArea.width / 2,
       y: printableArea.top + printableArea.height / 2,
       rotation: 0
@@ -364,7 +378,7 @@ function App() {
   };
 
   // Create a wrapper for text updates from the Right component
-  const handleTextUpdateFromRight = (updates: Partial<{ text: string; fontSize: number; color: string }>) => {
+  const handleTextUpdateFromRight = (updates: Partial<{ text: string; fontSize: number; color: string; font: string }>) => {
     if (selectedTextId) {
       // Always update in the active view
       handleTextUpdate(selectedTextId, updates, activeView);
@@ -375,12 +389,325 @@ function App() {
     setActiveView(view);
   };
 
+  const handleBgRemove = async () => {
+    const selectedImage = activeView === 'front'
+      ? frontImages.find(img => img.id === selectedImageId)
+      : backImages.find(img => img.id === selectedImageId);
+
+    if (!selectedImage) return;
+
+    try {
+      // Create a FormData object
+      const formData = new FormData();
+      formData.append("size", "auto");
+
+      // Use the original file
+      formData.append("image_file", selectedImage.blob);
+
+      // Add loading state
+      const loadingId = toast.loading("Removing background...");
+
+      const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+        method: 'POST',
+        headers: {
+          'X-Api-Key': 'UGaHX6S8TANvkG4qrAMvTf7F'
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setResultUrl(url);
+
+        // Create a new File from the blob
+        const newFile = new File([blob], "removed-bg.png", { type: "image/png" });
+
+        // Create a data URL from the blob to display in the canvas
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          // Update the existing image instead of creating a new one
+          const updatedImage = {
+            ...selectedImage,
+            url: e.target?.result as string,
+            blob: newFile
+          };
+
+          // Update the image in the appropriate array
+          if (activeView === 'front') {
+            setFrontImages(prev =>
+              prev.map(img => img.id === selectedImage.id ? updatedImage : img)
+            );
+          } else {
+            setBackImages(prev =>
+              prev.map(img => img.id === selectedImage.id ? updatedImage : img)
+            );
+          }
+
+          // Show success message
+          toast.update(loadingId, {
+            render: "Background removed successfully!",
+            type: "success",
+            isLoading: false,
+            autoClose: 3000
+          });
+        };
+
+        reader.readAsDataURL(blob);
+      } else {
+        const errorData = await response.json();
+        console.error("Background removal failed:", errorData);
+        toast.update(loadingId, {
+          render: `Failed to remove background: ${errorData.errors?.[0]?.title || 'Unknown error'}`,
+          type: "error",
+          isLoading: false,
+          autoClose: 5000
+        });
+      }
+    } catch (error) {
+      console.error("Error in background removal:", error);
+      toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Add this function to handle text alignment with proper width calculation
+  const handleTextAlignmentChange = (alignment: { horizontal?: 'left' | 'center' | 'right', vertical?: 'top' | 'middle' | 'bottom' }) => {
+    if (!selectedTextId) return;
+
+    const selectedText = activeView === 'front'
+      ? frontTexts.find(text => text.id === selectedTextId)
+      : backTexts.find(text => text.id === selectedTextId);
+
+    if (!selectedText) return;
+
+    const containerWidth = canvasRef.current?.getContainerWidth() || 500;
+    const printableArea = getScaledPrintableArea(containerWidth).front;
+
+    let newX = selectedText.x || printableArea.left + printableArea.width / 2;
+    let newY = selectedText.y || printableArea.top + printableArea.height / 2;
+
+    // Create a temporary canvas to measure text width
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Set the font to match the text's font
+      const fontFamily = selectedText.font || 'Arial';
+      const fontSize = selectedText.fontSize;
+      ctx.font = `${fontSize}px ${fontFamily}`;
+
+      // Measure the text width
+      const textWidth = ctx.measureText(selectedText.text).width;
+
+      // Horizontal alignment with proper text width
+      if (alignment.horizontal === 'left') {
+        newX = printableArea.left + (textWidth / 2);
+      } else if (alignment.horizontal === 'center') {
+        newX = printableArea.left + printableArea.width / 2;
+      } else if (alignment.horizontal === 'right') {
+        newX = printableArea.left + printableArea.width - (textWidth / 2);
+      }
+    }
+
+    // Vertical alignment
+    if (alignment.vertical === 'top') {
+      newY = printableArea.top + (selectedText.fontSize / 2);
+    } else if (alignment.vertical === 'middle') {
+      newY = printableArea.top + printableArea.height / 2;
+    } else if (alignment.vertical === 'bottom') {
+      newY = printableArea.top + printableArea.height - (selectedText.fontSize / 2);
+    }
+
+    handleTextUpdate(selectedText.id, { x: newX, y: newY }, activeView);
+  };
+
+  // Add Uploadcare configuration
+  const UPLOADCARE_PUBLIC_KEY = '430bdd5c900d15d324d2'; // Replace with your actual public key
+
+  // Update the handleExportDesign function to properly handle both views
+  const handleExportDesign = async () => {
+    if (!canvasRef.current) return;
+
+    try {
+      // Show loading state
+      const loadingId = toast.loading("Preparing your designs...");
+
+      // Save current view to restore it later
+      const currentViewBackup = activeView;
+
+      // Array to store both design URLs
+      const designUrls: { front?: string, back?: string } = {};
+
+      // Process both views
+      for (const view of ['front', 'back'] as const) {
+        // Switch to the view we want to capture
+        if (view !== activeView) {
+          // Set the view and wait for the component to update
+          setActiveView(view);
+          // Need to wait for the view to update
+          await new Promise(resolve => setTimeout(resolve, 300)); // Increased timeout for view change
+        }
+
+        // Force a re-render of the canvas for the current view
+        if (canvasRef.current) {
+          canvasRef.current.refreshView(view);
+          // Wait for the canvas to update
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        // Get the canvas element from the stage for the current view
+        const canvas = canvasRef.current.getStageCanvas();
+
+        if (!canvas) {
+          toast.update(loadingId, {
+            render: `Could not generate ${view} design image`,
+            type: "error",
+            isLoading: false,
+            autoClose: 3000
+          });
+          continue; // Skip this view but try the other one
+        }
+
+        try {
+          // Convert the canvas to a blob and upload
+          const blob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob(resolve, 'image/png');
+          });
+
+          if (!blob) {
+            toast.update(loadingId, {
+              render: `Failed to create ${view} image`,
+              type: "warning",
+              isLoading: true,
+              autoClose: false
+            });
+            continue;
+          }
+
+          // Create a File object from the blob
+          const file = new File([blob], `tshirt-${view}.png`, { type: "image/png" });
+
+          // Create FormData for Uploadcare
+          const formData = new FormData();
+          formData.append('UPLOADCARE_PUB_KEY', UPLOADCARE_PUBLIC_KEY);
+          formData.append('file', file);
+
+          // Upload to Uploadcare
+          const response = await fetch('https://upload.uploadcare.com/base/', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (data.file) {
+            // Store the URL for this view
+            designUrls[view] = `https://ucarecdn.com/${data.file}/`;
+            toast.update(loadingId, {
+              render: `${view.charAt(0).toUpperCase() + view.slice(1)} design uploaded...`,
+              type: "info",
+              isLoading: true,
+              autoClose: false
+            });
+          } else {
+            throw new Error(`${view} upload failed`);
+          }
+        } catch (error) {
+          toast.update(loadingId, {
+            render: `${view} upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            type: "warning",
+            isLoading: true,
+            autoClose: false
+          });
+        }
+      }
+
+      // Restore the original view
+      setActiveView(currentViewBackup);
+
+      // Check if we have at least one successful upload
+      if (designUrls.front || designUrls.back) {
+        toast.update(loadingId, {
+          render: "Designs uploaded successfully!",
+          type: "success",
+          isLoading: false,
+          autoClose: 3000
+        });
+
+        // Log the URLs
+        console.log('Design URLs:', designUrls);
+
+        // Create a simple results page to show both designs
+        if (designUrls.front && designUrls.back) {
+          const resultsHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>Your T-Shirt Designs</title>
+              <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                .designs { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+                .design { margin: 10px; }
+                img { max-width: 400px; border: 1px solid #ddd; }
+                h2 { color: #333; }
+                .download { margin-top: 10px; }
+                a { display: inline-block; padding: 8px 16px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; }
+              </style>
+            </head>
+            <body>
+              <h1>Your T-Shirt Designs</h1>
+              <div class="designs">
+                <div class="design">
+                  <h2>Front Design</h2>
+                  <img src="${designUrls.front}" alt="Front Design">
+                  <div class="download">
+                    <a href="${designUrls.front}" download="tshirt-front.png">Download Front</a>
+                  </div>
+                </div>
+                <div class="design">
+                  <h2>Back Design</h2>
+                  <img src="${designUrls.back}" alt="Back Design">
+                  <div class="download">
+                    <a href="${designUrls.back}" download="tshirt-back.png">Download Back</a>
+                  </div>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+
+          // Create a blob with the HTML content
+          const htmlBlob = new Blob([resultsHTML], { type: 'text/html' });
+          const resultsUrl = URL.createObjectURL(htmlBlob);
+
+          // Open the results page in a new tab
+          window.open(resultsUrl, '_blank');
+        } else {
+          // If only one design was uploaded, open it directly
+          const url = designUrls.front || designUrls.back;
+          if (url) {
+            window.open(url, '_blank');
+          }
+        }
+      } else {
+        toast.update(loadingId, {
+          render: "Failed to upload any designs",
+          type: "error",
+          isLoading: false,
+          autoClose: 3000
+        });
+      }
+    } catch (error) {
+      toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <ToastContainer />
       <Header />
       <div className="lg:w-11/12 md:w-full mx-auto py-6 px-0 md:px-6 flex flex-col md:flex-row gap-8 w-screen justify-center">
         <div ref={canvasContainerRef} className="md:w-3/5 w-full">
+
           <TShirtMockup
             ref={canvasRef}
             printableArea={getScaledPrintableArea(500).front}
@@ -400,6 +727,22 @@ function App() {
             onImageUpload={handleImageUpload}
             onViewChange={handleViewChange}
           />
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={handleBgRemove}
+              disabled={!selectedImageId}
+              className={`bg-indigo-500 text-white p-2 mt-2 rounded-md ${!selectedImageId ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              Remove Background
+            </button>
+
+            <button
+              onClick={handleExportDesign}
+              className="bg-green-500 text-white p-2 mt-2 rounded-md hover:bg-green-600"
+            >
+              Export Design
+            </button>
+          </div>
         </div>
         <div ref={rightPanelRef} className="md:w-2/5 w-full">
           <Right
@@ -412,6 +755,7 @@ function App() {
             selectedTextId={selectedTextId}
             selectedText={selectedText}
             onAlignmentChange={handleAlignmentChange}
+            onTextAlignmentChange={handleTextAlignmentChange}
             onPositionPreset={handlePositionPreset}
             selectedImageId={selectedImageId}
             selectedImage={activeView === 'front'
