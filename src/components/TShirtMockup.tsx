@@ -64,6 +64,7 @@ interface TShirtMockupProps {
   onTextDoubleClick?: (id: string, view: 'front' | 'back') => void;
   onImageUpload?: (file: File, view: 'front' | 'back') => void;
   onViewChange?: (view: 'front' | 'back') => void;
+  exporting: boolean;
 }
 
 // Make sure the interface is exported
@@ -111,6 +112,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   onTextDoubleClick,
   onImageUpload,
   onViewChange,
+  exporting
 }, ref) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
@@ -425,6 +427,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               onTextDoubleClick={handleTextDoubleClick}
               shirtColor={currentColor}
               shirtView={'back'}
+              exporting={exporting}
             />
           )}
 
@@ -444,6 +447,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               onTextDoubleClick={handleTextDoubleClick}
               shirtColor={currentColor}
               shirtView={'front'}
+              exporting={exporting}
             />
           )}
 

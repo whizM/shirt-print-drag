@@ -70,7 +70,7 @@ function App() {
   const canvasRef = useRef<TShirtMockupRef>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-
+  const [exporting, setExporting] = useState(false);
   // Add a ref for the text input
   const textInputRef = useRef<HTMLInputElement>(null);
 
@@ -519,7 +519,9 @@ function App() {
   // Update the handleExportDesign function to take a specific view
   const handleExportDesign = async (viewToExport: 'front' | 'back') => {
     if (!canvasRef.current) return;
-
+    setSelectedTextId(null);
+    setSelectedImageId(null);
+    setExporting(true);
     try {
       // Show loading state
       const loadingId = toast.loading(`Preparing your ${viewToExport} design...`);
@@ -609,6 +611,7 @@ function App() {
           autoClose: 5000
         });
       } finally {
+        setExporting(false);
         // Restore the original view
         if (viewToExport !== currentViewBackup) {
           setActiveView(currentViewBackup);
@@ -644,6 +647,7 @@ function App() {
             onTextDoubleClick={handleTextDoubleClick}
             onImageUpload={handleImageUpload}
             onViewChange={handleViewChange}
+            exporting={exporting}
           />
           <div className="flex justify-center gap-2">
             <button

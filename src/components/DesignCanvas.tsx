@@ -40,6 +40,7 @@ interface DesignCanvasProps {
     onTextDoubleClick?: (id: string) => void;
     shirtColor: 'white' | 'black';
     shirtView: 'front' | 'back';
+    exporting: boolean;
 }
 
 // Add ref type
@@ -71,7 +72,8 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     containerWidth,
     onTextDoubleClick,
     shirtColor,
-    shirtView
+    shirtView,
+    exporting
 }, ref) => {
     const stageRef = useRef<Konva.Stage>(null);
     const imageRefs = useRef<{ [key: string]: Konva.Image | null }>({});
@@ -200,7 +202,7 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                     )}
 
                     {/* Render faded versions of images first */}
-                    {images.map(image => (
+                    {!exporting && images.map(image => (
                         <ImageLayer
                             key={`faded-${image.id}`}
                             ref={(node) => {
@@ -262,7 +264,7 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                     />
 
                     {/* Text elements with double-click handler */}
-                    {texts.map((el) => (
+                    {!exporting && texts.map((el) => (
                         <Text
                             key={el.id}
                             ref={(node) => {
@@ -301,9 +303,64 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                             }}
                             onDragEnd={(e) => handleTextDragEnd(e, el.id)}
                             onTransformEnd={() => handleTextTransform(el.id)}
+                            opacity={0.3}
                         />
                     ))}
+                    {/* Clipped version on top */}
+                    <Group
+                        clipFunc={(ctx) => {
+                            ctx.beginPath();
+                            ctx.rect(
+                                printableArea.left,
+                                printableArea.top,
+                                printableArea.width,
+                                printableArea.height
+                            );
+                            ctx.closePath();
+                        }}
+                    >
+                        {texts.map((el) => (
+                            <Text
+                                key={el.id}
+                                ref={(node) => {
+                                    // Cast the node to our extended type
+                                    textRefs.current[el.id] = node as TextWithTapTime;
+                                }}
+                                text={el.text}
+                                x={el.x || printableArea.left + printableArea.width / 2}
+                                y={el.y || printableArea.top + printableArea.height / 2}
+                                fontSize={el.fontSize}
+                                fill={el.color}
+                                fontFamily={el.font || 'Arial'}
+                                rotation={el.rotation || 0}
+                                draggable
+                                offsetX={el.text.length * el.fontSize / 4}
+                                offsetY={el.fontSize / 2}
+                                onClick={() => onTextSelect && onTextSelect(el.id)}
+                                onTap={() => onTextSelect && onTextSelect(el.id)}
+                                onDblClick={() => onTextDoubleClick && onTextDoubleClick(el.id)}
+                                onDblTap={() => onTextDoubleClick && onTextDoubleClick(el.id)}
+                                onTouchEnd={(_) => { // Use underscore to indicate unused parameter
+                                    const now = Date.now();
+                                    const lastTap = textRefs.current[el.id]?.lastTapTime || 0;
+                                    const tapLength = now - lastTap;
 
+                                    if (tapLength < 500 && tapLength > 0) {
+                                        if (onTextDoubleClick) {
+                                            onTextDoubleClick(el.id);
+                                        }
+                                    }
+
+                                    // Don't use optional chaining on left side of assignment
+                                    if (textRefs.current[el.id]) {
+                                        textRefs.current[el.id]!.lastTapTime = now;
+                                    }
+                                }}
+                                onDragEnd={(e) => handleTextDragEnd(e, el.id)}
+                                onTransformEnd={() => handleTextTransform(el.id)}
+                            />
+                        ))}
+                    </Group>
                     {/* Transformer remains on top */}
                     <Transformer
                         ref={transformerRef}
