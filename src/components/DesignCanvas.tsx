@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { Stage, Layer, Transformer, Rect, Text, Group, Image as KonvaImage } from 'react-konva';
+import { Stage, Layer, Transformer, Rect, Text, Group } from 'react-konva';
 import Konva from 'konva';
 import ImageLayer from './ImageLayer';
-import useImage from 'use-image';
 import { HardDriveDownload } from 'lucide-react';
 interface DesignCanvasProps {
     images: Array<{
@@ -38,8 +37,6 @@ interface DesignCanvasProps {
     containerWidth: number;
     onTextUpdate?: (id: string, updates: Partial<{ text: string; fontSize: number; color: string; x: number; y: number; rotation: number }>) => void;
     onTextDoubleClick?: (id: string) => void;
-    shirtColor: 'white' | 'black';
-    shirtView: 'front' | 'back';
     exporting: boolean;
 }
 
@@ -71,8 +68,6 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     onTextUpdate,
     containerWidth,
     onTextDoubleClick,
-    shirtColor,
-    shirtView,
     exporting
 }, ref) => {
     const stageRef = useRef<Konva.Stage>(null);
@@ -81,7 +76,6 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     const transformerRef = useRef<Konva.Transformer>(null);
 
     // Add this to load the t-shirt image
-    const [shirtImage] = useImage(`./images/tshirt-${shirtView}-${shirtColor}.png`);
     // Update transformer when selection changes
     useEffect(() => {
         if (!transformerRef.current) return;
@@ -190,17 +184,6 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                 }}
             >
                 <Layer>
-                    {/* Add the shirt image as the background */}
-                    {shirtImage && (
-                        <KonvaImage
-                            image={shirtImage}
-                            width={containerWidth}
-                            height={containerWidth}
-                            x={0}
-                            y={0}
-                        />
-                    )}
-
                     {/* Render faded versions of images first */}
                     {!exporting && images.map(image => (
                         <ImageLayer
@@ -376,22 +359,7 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                     />
                 </Layer>
             </Stage>
-            {/* Download Konva canvas   */}
-            <button
-                className="absolute bottom-4 right-4 bg-indigo-100 hover:bg-indigo-200 text-indigo-200 hover:text-indigo-600 p-3 rounded-full"
-                onClick={() => {
-                    const canvas = stageRef.current?.toCanvas({ pixelRatio: 2 });
-                    if (canvas) {
-                        const image = canvas.toDataURL('image/png');
-                        const link = document.createElement('a');
-                        link.href = image;
-                        link.download = 't-shirt-mockup.png';
-                        link.click();
-                    }
-                }}
-            >
-                <HardDriveDownload className="w-6 h-6" />
-            </button>
+
         </>
     );
 });

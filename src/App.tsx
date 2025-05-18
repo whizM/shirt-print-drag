@@ -648,6 +648,8 @@ function App() {
             onImageUpload={handleImageUpload}
             onViewChange={handleViewChange}
             exporting={exporting}
+            setSelectedImageId={setSelectedImageId}
+            setSelectedTextId={setSelectedTextId}
           />
           <div className="flex justify-center gap-2">
             <button

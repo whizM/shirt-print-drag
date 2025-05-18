@@ -1,7 +1,7 @@
 import { useState, useImperativeHandle, forwardRef, useRef, useEffect } from 'react';
 import DesignCanvas from './DesignCanvas';
 import type { DesignCanvasRef } from './DesignCanvas';
-import { RefreshCw, ZoomIn, ZoomOut, ChevronDown, RotateCcw, RotateCw, Upload } from 'lucide-react';
+import { RefreshCw, ZoomIn, ZoomOut, ChevronDown, RotateCcw, RotateCw, Upload, HardDriveDownload } from 'lucide-react';
 
 // Add shirt styles
 const shirtStyles = [
@@ -65,7 +65,21 @@ interface TShirtMockupProps {
   onImageUpload?: (file: File, view: 'front' | 'back') => void;
   onViewChange?: (view: 'front' | 'back') => void;
   exporting: boolean;
+  setSelectedImageId: (id: string | null) => void;
+  setSelectedTextId: (id: string | null) => void;
 }
+
+// Import t-shirt images
+const tshirtImages = {
+  front: {
+    white: '/images/tshirt-front-white.png',
+    black: '/images/tshirt-front-black.png',
+  },
+  back: {
+    white: '/images/tshirt-back-white.png',
+    black: '/images/tshirt-back-black.png',
+  }
+};
 
 // Make sure the interface is exported
 export interface TShirtMockupRef {
@@ -112,7 +126,9 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
   onTextDoubleClick,
   onImageUpload,
   onViewChange,
-  exporting
+  exporting,
+  setSelectedImageId,
+  setSelectedTextId
 }, ref) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentView, setCurrentView] = useState<'front' | 'back'>('front');
@@ -409,6 +425,15 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
                 />
               </div>
             )}
+          {/* T-shirt image */}
+          <img
+            src={tshirtImages[currentView][currentColor]}
+            alt={`T-shirt ${currentView} view`}
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{
+              filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))'
+            }}
+          />
 
           {/* Design canvas */}
           {currentView === 'back' && (
@@ -425,8 +450,6 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               selectedTextId={selectedTextId}
               onTextUpdate={handleTextUpdate}
               onTextDoubleClick={handleTextDoubleClick}
-              shirtColor={currentColor}
-              shirtView={'back'}
               exporting={exporting}
             />
           )}
@@ -445,12 +468,27 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               selectedTextId={selectedTextId}
               onTextUpdate={handleTextUpdate}
               onTextDoubleClick={handleTextDoubleClick}
-              shirtColor={currentColor}
-              shirtView={'front'}
               exporting={exporting}
             />
           )}
-
+          {/* Download Konva canvas   */}
+          <button
+            className="absolute bottom-4 right-4 bg-indigo-100 hover:bg-indigo-200 text-indigo-200 hover:text-indigo-600 p-3 rounded-full"
+            onClick={() => {
+              setSelectedImageId(null)
+              setSelectedTextId(null)
+              const canvas = canvasRef.current?.getStageCanvas();
+              if (canvas) {
+                const image = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = 't-shirt-mockup.png';
+                link.click();
+              }
+            }}
+          >
+            <HardDriveDownload className="w-6 h-6" />
+          </button>
           {showPrintableArea && (
             <div
               className="absolute border-2 border-dashed border-blue-400 bg-blue-50 bg-opacity-10 pointer-events-none"
