@@ -590,7 +590,15 @@ function App() {
 
         if (data.file) {
           const imageUrl = `https://ucarecdn.com/${data.file}/`;
-
+          const post = await fetch('http://emmano.pl/products/biala-koszulka-13957/context', {
+            method: 'POST',
+            body: JSON.stringify({ "name": "Logo duże", "color": "", "attributes": { "Dodaj plik": data.file }, "background": "", "all_designs": {} }),
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          const postData = await post.json();
+          console.log(postData);
           toast.update(loadingId, {
             render: `${viewToExport.charAt(0).toUpperCase() + viewToExport.slice(1)} design uploaded successfully!`,
             type: "success",
@@ -611,6 +619,7 @@ function App() {
           autoClose: 5000
         });
       } finally {
+
         setExporting(false);
         // Restore the original view
         if (viewToExport !== currentViewBackup) {
