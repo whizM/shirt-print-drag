@@ -37,6 +37,7 @@ interface DesignCanvasProps {
     onTextUpdate?: (id: string, updates: Partial<{ text: string; fontSize: number; color: string; x: number; y: number; rotation: number }>) => void;
     onTextDoubleClick?: (id: string) => void;
     exporting: boolean;
+    onDeselect?: () => void;
 }
 
 // Add ref type
@@ -67,7 +68,8 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
     onTextUpdate,
     containerWidth,
     onTextDoubleClick,
-    exporting
+    exporting,
+    onDeselect
 }, ref) => {
     const stageRef = useRef<Konva.Stage>(null);
     const imageRefs = useRef<{ [key: string]: Konva.Image | null }>({});
@@ -192,6 +194,17 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
         }
     };
 
+    // Add a handler for stage clicks
+    const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+        // Get the target of the click
+        const clickedOnEmpty = e.target === e.target.getStage();
+
+        // If clicked on the stage itself (not on any shape)
+        if (clickedOnEmpty && onDeselect) {
+            onDeselect();
+        }
+    };
+
     return (
         <>
             <Stage
@@ -206,6 +219,8 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
                     height: '100%',
                     transform: 'translate(-50%, -50%)',
                 }}
+                onClick={handleStageClick}
+                onTap={handleStageClick}
             >
                 <Layer>
                     {/* Render faded versions of images first */}

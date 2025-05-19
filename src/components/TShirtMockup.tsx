@@ -451,6 +451,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               onTextUpdate={handleTextUpdate}
               onTextDoubleClick={handleTextDoubleClick}
               exporting={exporting}
+              onDeselect={onDeselect}
             />
           )}
 
@@ -469,6 +470,7 @@ const TShirtMockup = forwardRef<TShirtMockupRef, TShirtMockupProps>(({
               onTextUpdate={handleTextUpdate}
               onTextDoubleClick={handleTextDoubleClick}
               exporting={exporting}
+              onDeselect={onDeselect}
             />
           )}
           {/* Download Konva canvas   */}
