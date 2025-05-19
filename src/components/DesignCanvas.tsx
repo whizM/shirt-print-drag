@@ -133,7 +133,32 @@ const DesignCanvas = forwardRef<DesignCanvasRef, DesignCanvasProps>(({
         getContainerWidth: () => containerWidth,
         getStageCanvas: () => {
             if (stageRef.current) {
-                return stageRef.current.toCanvas({ pixelRatio: 2 });
+                // Create a new canvas with the dimensions of the printable area
+                const canvas = document.createElement('canvas');
+                const pixelRatio = 2; // Higher resolution for better quality
+                canvas.width = printableArea.width * pixelRatio;
+                canvas.height = printableArea.height * pixelRatio;
+                const context = canvas.getContext('2d');
+
+                if (context) {
+                    // Get the full stage canvas
+                    const stageCanvas = stageRef.current.toCanvas({
+                        pixelRatio: pixelRatio,
+                        x: printableArea.left,
+                        y: printableArea.top,
+                        width: printableArea.width,
+                        height: printableArea.height
+                    });
+
+                    // Draw only the printable area portion to our new canvas
+                    context.drawImage(
+                        stageCanvas,
+                        0, 0,
+                        canvas.width, canvas.height
+                    );
+
+                    return canvas;
+                }
             }
             return null;
         },
